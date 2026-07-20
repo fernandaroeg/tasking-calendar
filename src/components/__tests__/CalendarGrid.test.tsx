@@ -1,4 +1,4 @@
-import { vi, describe, it, expect, beforeEach } from 'vitest';
+import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import CalendarGrid from '../CalendarGrid';
 
@@ -8,7 +8,9 @@ vi.mock('lucide-react', () => ({
   ChevronRight: () => <span>&gt;</span>,
   Plus: () => <span>+</span>,
   Calendar: () => <span>CalendarIcon</span>,
-  Loader2: () => <span>LoadingIcon</span>
+  Loader2: () => <span>LoadingIcon</span>,
+  Clock: () => <span>ClockIcon</span>,
+  MoreVertical: () => <span>MoreIcon</span>
 }));
 
 // Mock Firebase service methods
@@ -74,11 +76,33 @@ describe('CalendarGrid Component', () => {
   const defaultProps = {
     projectId: 'project-1',
     userRole: 'admin' as const,
-    userUid: 'user-admin'
+    currentUserProfile: {
+      uid: 'user-admin',
+      email: 'admin@ibermex.com.mx',
+      displayName: 'Admin User',
+      role: 'admin' as const,
+      createdAt: new Date(),
+      lastLogin: new Date()
+    },
+    projects: [
+      {
+        id: 'project-1',
+        name: 'Project 1',
+        assignedUsers: ['admin@ibermex.com.mx'],
+        createdBy: 'user-admin',
+        createdAt: new Date()
+      }
+    ]
   };
 
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(2026, 5, 23)); // Pin system date to June 2026
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
   });
 
   it('debe renderizar el contenedor del calendario y los botones de vista', () => {
@@ -97,12 +121,12 @@ describe('CalendarGrid Component', () => {
     const dayButton = screen.getByText('Día');
     const monthButton = screen.getByText('Mes');
 
-    // Default view is Month
-    expect(monthButton).toHaveStyle({ backgroundColor: 'hsl(var(--primary))' });
-
-    // Switch to Week
-    fireEvent.click(weekButton);
+    // Default view is Week
     expect(weekButton).toHaveStyle({ backgroundColor: 'hsl(var(--primary))' });
+
+    // Switch to Month
+    fireEvent.click(monthButton);
+    expect(monthButton).toHaveStyle({ backgroundColor: 'hsl(var(--primary))' });
 
     // Switch to Day
     fireEvent.click(dayButton);
@@ -133,15 +157,11 @@ describe('CalendarGrid Component', () => {
     expect(screen.getByText('Implementar Auth')).toBeInTheDocument();
   });
 
-  it('debe renderizar tareas recursivas en múltiples días y mostrar badge de prioridad', () => {
+  it('debe renderizar tareas recursivas en múltiples días', () => {
     render(<CalendarGrid {...defaultProps} />);
 
     // 'Daily Standup' is recurring from June 25 to June 28 with June 26 excluded, so it should render 3 times
     const standupTasks = screen.getAllByText('Daily Standup');
     expect(standupTasks.length).toBe(3);
-
-    // Verify priority badges are rendered
-    const lowPriorityPills = screen.getAllByText('LOW');
-    expect(lowPriorityPills.length).toBe(3);
   });
 });

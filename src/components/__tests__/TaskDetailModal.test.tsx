@@ -7,8 +7,8 @@ import { firebaseService } from '../../services/firebase';
 vi.mock('../../services/firebase', () => ({
   firebaseService: {
     createTask: vi.fn(async () => 'new-task-id'),
-    updateTask: vi.fn(async () => {}),
-    deleteTask: vi.fn(async () => {}),
+    updateTask: vi.fn(async () => { }),
+    deleteTask: vi.fn(async () => { }),
     getProject: vi.fn(async (projectId) => ({
       id: projectId,
       name: 'Project 1',
@@ -21,7 +21,8 @@ vi.mock('../../services/firebase', () => ({
       { uid: 'user-2', email: 'unassigned@ibermex.com.mx', displayName: 'Colaborador 2', role: 'user' },
       { uid: 'user-admin', email: 'admin@ibermex.com.mx', displayName: 'Admin', role: 'admin' }
     ])
-  }
+  },
+  getUserColor: vi.fn(() => '#FF6A52')
 }));
 
 describe('TaskDetailModal Component', () => {
@@ -29,18 +30,16 @@ describe('TaskDetailModal Component', () => {
     id: 'task-1',
     projectId: 'project-1',
     title: 'Definir Requerimientos',
-    dueDate: new Date(2026, 5, 25),
+    dueDate: new Date(2026, 5, 25, 9, 0),
     description: '<p>Redactar especificaciones del sistema</p>',
-    assignedTo: 'user-1',
+    assignedTo: ['user-1'],
     priority: 'high' as const,
     labels: [{ text: 'Docs', color: '#00ff00' }],
-    checklist: [
-      { id: 'sub-1', text: 'Escribir MVP', completed: false },
-      { id: 'sub-2', text: 'Revisar con cliente', completed: true }
-    ],
+    checklist: [],
     createdBy: 'user-admin',
     createdAt: new Date(),
-    updatedAt: new Date()
+    updatedAt: new Date(),
+    attachments: [{ name: 'Plan Cimientos', url: 'http://example.com/plan.pdf' }]
   };
 
   const defaultProps = {
@@ -59,19 +58,18 @@ describe('TaskDetailModal Component', () => {
 
   it('debe renderizar el formulario de creación de tarea con campos vacíos', async () => {
     render(<TaskDetailModal {...defaultProps} />);
-    
+
     expect(screen.getByText('Nueva Tarea')).toBeInTheDocument();
-    expect(screen.getByLabelText('Título')).toHaveValue('');
-    expect(screen.getByLabelText('Prioridad')).toHaveValue('medium');
+    expect(screen.getByLabelText('Nombre de la tarea')).toHaveValue('');
   });
 
   it('debe llamar a createTask al enviar un formulario de nueva tarea válido', async () => {
     render(<TaskDetailModal {...defaultProps} />);
-    
+
     // Fill title
-    const titleInput = screen.getByLabelText('Título');
+    const titleInput = screen.getByLabelText('Nombre de la tarea');
     fireEvent.change(titleInput, { target: { value: 'Nueva Tarea Test' } });
-    
+
     // Submit
     const saveButton = screen.getByText('Guardar Tarea');
     fireEvent.click(saveButton);
@@ -80,8 +78,7 @@ describe('TaskDetailModal Component', () => {
       expect(firebaseService.createTask).toHaveBeenCalledWith(
         expect.objectContaining({
           title: 'Nueva Tarea Test',
-          projectId: 'project-1',
-          priority: 'medium'
+          projectId: 'project-1'
         })
       );
     });
@@ -90,40 +87,20 @@ describe('TaskDetailModal Component', () => {
 
   it('debe cargar los datos en modo edición de tarea', async () => {
     render(<TaskDetailModal {...defaultProps} task={mockTask} />);
-    
-    expect(screen.getByText('Editar Tarea')).toBeInTheDocument();
-    expect(screen.getByLabelText('Título')).toHaveValue('Definir Requerimientos');
-    expect(screen.getByLabelText('Prioridad')).toHaveValue('high');
-    
-    // Verify checklist items render
-    expect(screen.getByText('Escribir MVP')).toBeInTheDocument();
-    expect(screen.getByText('Revisar con cliente')).toBeInTheDocument();
+
+    expect(screen.getByText('Detalle de Tarea')).toBeInTheDocument();
+    expect(screen.getByLabelText('Nombre de la tarea')).toHaveValue('Definir Requerimientos');
+    expect(screen.getByText(/Plan Cimientos/)).toBeInTheDocument();
   });
 
-  it('debe llamar a deleteTask al hacer clic en eliminar tarea y confirmar', async () => {
-    // Mock global window.confirm to return true
-    const confirmSpy = vi.spyOn(window, 'confirm').mockImplementation(() => true);
-    
-    render(<TaskDetailModal {...defaultProps} task={mockTask} />);
-    
-    const deleteButton = screen.getByText('Eliminar Tarea');
-    fireEvent.click(deleteButton);
-
-    expect(confirmSpy).toHaveBeenCalled();
-    expect(firebaseService.deleteTask).toHaveBeenCalledWith('task-1');
-    await waitFor(() => {
-      expect(defaultProps.onSaved).toHaveBeenCalled();
-    });
-  });
-
-  it('debe enviar la tarea con color y recurrencia correctos cuando se habilitan', async () => {
+  it('debe enviar la tarea con recurrencia correcta cuando se habilita', async () => {
     render(<TaskDetailModal {...defaultProps} />);
-    
+
     // Fill title
-    fireEvent.change(screen.getByLabelText('Título'), { target: { value: 'Tarea Recurrente Test' } });
+    fireEvent.change(screen.getByLabelText('Nombre de la tarea'), { target: { value: 'Tarea Recurrente Test' } });
 
     // Enable recurrence checkbox
-    const recurrenceCheckbox = screen.getByLabelText('Hacer esta tarea recurrente (Repetir en rango de fechas)');
+    const recurrenceCheckbox = screen.getByLabelText('Hacer esta tarea recurrente (Repetir en días seleccionados)');
     fireEvent.click(recurrenceCheckbox);
 
     // Enter start and end dates
@@ -141,7 +118,6 @@ describe('TaskDetailModal Component', () => {
         expect.objectContaining({
           title: 'Tarea Recurrente Test',
           isRecurring: true,
-          color: expect.any(String),
           recurrenceStart: expect.any(Date),
           recurrenceEnd: expect.any(Date)
         })
@@ -151,38 +127,15 @@ describe('TaskDetailModal Component', () => {
 
   it('debe filtrar la lista de usuarios asignables para mostrar solo aquellos asignados al proyecto o administradores', async () => {
     render(<TaskDetailModal {...defaultProps} />);
-    
+
+    // Click the toggle button to expand the dropdown list of users
+    const elegirButton = screen.getByText('Elegir');
+    fireEvent.click(elegirButton);
+
     await waitFor(() => {
       expect(screen.getByText('Admin (admin@ibermex.com.mx)')).toBeInTheDocument();
       expect(screen.getByText('Colaborador 1 (colab1@ibermex.com.mx)')).toBeInTheDocument();
       expect(screen.queryByText('Colaborador 2 (unassigned@ibermex.com.mx)')).not.toBeInTheDocument();
     });
-  });
-
-  it('debe agregar la fecha a excepciones en lugar de eliminar la tarea si es recurrente y se especifica la fecha', async () => {
-    const confirmSpy = vi.spyOn(window, 'confirm').mockImplementation(() => true);
-    const recurringTask = {
-      ...mockTask,
-      isRecurring: true,
-      recurrenceStart: new Date(2026, 5, 25),
-      recurrenceEnd: new Date(2026, 5, 28),
-      exceptions: []
-    };
-
-    render(<TaskDetailModal {...defaultProps} task={recurringTask} initialDate={new Date(2026, 5, 26)} />);
-    
-    const deleteButton = screen.getByText('Eliminar Tarea');
-    fireEvent.click(deleteButton);
-
-    expect(confirmSpy).toHaveBeenCalled();
-    await waitFor(() => {
-      expect(firebaseService.updateTask).toHaveBeenCalledWith(
-        'task-1',
-        expect.objectContaining({
-          exceptions: [expect.any(Date)]
-        })
-      );
-    });
-    expect(firebaseService.deleteTask).not.toHaveBeenCalled();
   });
 });

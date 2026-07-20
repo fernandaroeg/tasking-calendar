@@ -44,7 +44,7 @@ export interface Task {
   title: string;
   dueDate: Date;
   description: string; // HTML/Rich text
-  assignedTo?: string; // User UID
+  assignedTo?: string[]; // Array of User UIDs
   priority: 'high' | 'medium' | 'low';
   labels: TaskLabel[];
   checklist: ChecklistItem[];
@@ -55,7 +55,11 @@ export interface Task {
   isRecurring?: boolean;
   recurrenceStart?: Date;
   recurrenceEnd?: Date;
+  recurrenceDays?: string[]; // Days of week selected: e.g. ['lun', 'mie']
   exceptions?: Date[];
+  completed?: boolean;
+  completedDates?: string[]; // Array of YYYY-MM-DD strings indicating completed recurrence dates
+  attachments?: { name: string; url: string }[];
 }
 
 /**
@@ -78,6 +82,7 @@ export interface IFirebaseService {
   getProjects(): Promise<Project[]>; // Returns all for admin, or filtered list for collaborators
   getProject(projectId: string): Promise<Project | null>;
   updateProjectMembers(projectId: string, assignedUsers: string[]): Promise<void>;
+  updateProject(projectId: string, name: string, description?: string): Promise<void>;
   deleteProject(projectId: string): Promise<void>;
 
   // Tasks
@@ -85,4 +90,5 @@ export interface IFirebaseService {
   updateTask(taskId: string, updates: Partial<Omit<Task, 'id' | 'createdAt' | 'updatedAt' | 'createdBy'>>): Promise<void>;
   deleteTask(taskId: string): Promise<void>;
   subscribeToTasks(projectId: string, callback: (tasks: Task[]) => void): () => void; // Real-time sync listener
+  subscribeToAllTasks(callback: (tasks: Task[]) => void): () => void; // Real-time sync listener for all tasks
 }

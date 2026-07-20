@@ -15,6 +15,7 @@ vi.mock('../../services/firebase', () => ({
     getAllUsers: vi.fn(async () => []),
     getProjects: vi.fn(async () => []),
     updateProjectMembers: vi.fn(async () => {}),
+    updateProject: vi.fn(async () => {}),
     deleteProject: vi.fn(async () => {}),
     getCurrentUser: vi.fn(() => ({ uid: 'user-admin', email: 'admin@ibermex.com.mx', displayName: 'Admin', role: 'admin' }))
   }

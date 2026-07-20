@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { LogIn, LogOut, Calendar as CalendarIcon, ShieldAlert, Folder, Plus, Users, Loader2, X, Check } from 'lucide-react';
+import { LogIn, LogOut, Calendar as CalendarIcon, ShieldAlert, Folder, Plus, Users, Loader2, X, Check, ChevronLeft, ChevronRight, LayoutDashboard, Menu } from 'lucide-react';
 import { firebaseService } from './services/firebase';
 import type { UserProfile, Project, PreApprovedUser } from '../specs/001-project-task-calendar/contracts/firebase-service';
 import CalendarGrid from './components/CalendarGrid';
 import AdminDashboard from './components/AdminDashboard';
+import Dashboard from './components/Dashboard';
 import logoIbermex2025 from './assets/logo_ibermex_2025.png';
 import ibermexIso4 from './assets/Ibermex-Iso_4.png';
 
@@ -13,10 +14,11 @@ function App() {
   const [authError, setAuthError] = useState<string | null>(null);
 
   // Navigation states
-  const [activeTab, setActiveTab] = useState<'calendar' | 'admin'>('calendar');
+  const [activeTab, setActiveTab] = useState<'calendar' | 'admin' | 'dashboard'>('calendar');
   const [projects, setProjects] = useState<Project[]>([]);
-  const [selectedProjectId, setSelectedProjectId] = useState<string>('');
+  const [selectedProjectId, setSelectedProjectId] = useState<string>('all');
   const [projectsLoading, setProjectsLoading] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   // Project creation modal states
   const [showCreateProjectModal, setShowCreateProjectModal] = useState(false);
@@ -170,7 +172,10 @@ function App() {
           <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '1.5rem' }}>
             <img src={logoIbermex2025} alt="Ibermex Logo" style={{ height: '64px', objectFit: 'contain' }} />
           </div>
-          <h1 style={{ fontFamily: 'var(--font-serif)', fontSize: '2.5rem', margin: '0 0 0.5rem', fontWeight: 700, color: 'var(--text-h)' }}>Task Calendar</h1>
+          <h1 style={{ fontFamily: 'var(--font-sans)', fontSize: '2.5rem', margin: '0 0 0.25rem', fontWeight: 800, color: 'var(--text-h)', letterSpacing: '-0.02em' }}>Task Calendar</h1>
+          <p style={{ fontFamily: 'var(--font-serif)', fontStyle: 'italic', color: 'hsl(var(--primary))', fontSize: '1.1rem', margin: '0 0 1.25rem', fontWeight: 600 }}>
+            "Construyendo el Futuro con los Mejores Cimientos"
+          </p>
           <p style={{ color: 'var(--muted-foreground)', marginBottom: '2rem', fontSize: '0.95rem' }}>
             Sistema de planificación de tareas
           </p>
@@ -201,80 +206,133 @@ function App() {
   return (
     <div className="app-container">
       {/* Left Sidebar */}
-      <aside className="sidebar">
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '2rem' }}>
-          <img src={ibermexIso4} alt="Ibermex Iso" style={{ width: '28px', height: '28px', objectFit: 'contain' }} />
-          <span style={{ fontFamily: 'var(--font-serif)', fontWeight: 700, fontSize: '1.4rem', color: 'var(--text-h)' }}>Ibermex Cal</span>
+      <aside className={`sidebar ${sidebarCollapsed ? 'collapsed' : ''}`}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: sidebarCollapsed ? 'center' : 'space-between', marginBottom: '2rem', width: '100%', flexDirection: sidebarCollapsed ? 'column' : 'row', gap: sidebarCollapsed ? '0.5rem' : 'unset' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+            <img src={ibermexIso4} alt="Ibermex Iso" style={{ width: '28px', height: '28px', flexShrink: 0, objectFit: 'contain' }} />
+            {!sidebarCollapsed && (
+              <span style={{ fontFamily: 'var(--font-sans)', fontWeight: 800, fontSize: '1.4rem', color: 'var(--text-h)', letterSpacing: '-0.03em', whiteSpace: 'nowrap' }}>
+                Ibermex Cal
+              </span>
+            )}
+          </div>
+          <button
+            onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+            className="btn-icon"
+            style={{ padding: '0.25rem', border: '1px solid var(--border)', borderRadius: '6px', background: 'hsl(var(--card))' }}
+            title={sidebarCollapsed ? "Expandir menú" : "Colapsar menú"}
+          >
+            {sidebarCollapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
+          </button>
         </div>
 
         {/* User Card */}
-        <div className="glass-panel" style={{ padding: '1rem', display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1.5rem' }}>
+        <div className="glass-panel" style={{ padding: sidebarCollapsed ? '0.5rem' : '1rem', display: 'flex', alignItems: 'center', justifyContent: sidebarCollapsed ? 'center' : 'flex-start', gap: '0.75rem', marginBottom: '1.5rem', width: '100%', boxSizing: 'border-box' }}>
           {user.photoURL ? (
-            <img src={user.photoURL} alt={user.displayName} style={{ width: '36px', height: '36px', borderRadius: '50%' }} />
+            <img src={user.photoURL} alt={user.displayName} style={{ width: '36px', height: '36px', borderRadius: '50%', flexShrink: 0 }} />
           ) : (
-            <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: 'var(--primary)', color: 'var(--primary-foreground)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700 }}>
+            <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: 'var(--primary)', color: 'var(--primary-foreground)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, flexShrink: 0 }}>
               {user.displayName.charAt(0).toUpperCase()}
             </div>
           )}
-          <div style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-            <span style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--text-h)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{user.displayName}</span>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', marginTop: '0.1rem' }}>
-              <span className={`badge ${user.role === 'admin' || user.role === 'master_admin' ? 'badge-admin' : ''}`} style={{ fontSize: '0.6rem', padding: '0.1rem 0.35rem' }}>
-                {user.role === 'master_admin' ? 'Master Admin' : user.role === 'admin' ? 'Administrador' : 'Colaborador'}
-              </span>
+          {!sidebarCollapsed && (
+            <div style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+              <span style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--text-h)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{user.displayName}</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', marginTop: '0.1rem' }}>
+                <span className={`badge ${user.role === 'admin' || user.role === 'master_admin' ? 'badge-admin' : ''}`} style={{ fontSize: '0.6rem', padding: '0.1rem 0.35rem' }}>
+                  {user.role === 'master_admin' ? 'Master Admin' : user.role === 'admin' ? 'Administrador' : 'Colaborador'}
+                </span>
+              </div>
             </div>
-          </div>
+          )}
         </div>
 
         {/* Navigation Tabs */}
-        <nav style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem', marginBottom: '2rem' }}>
+        <nav style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem', marginBottom: '2rem', width: '100%' }}>
           <button
-            className={`project-item ${activeTab === 'calendar' ? 'active' : ''}`}
-            onClick={() => setActiveTab('calendar')}
+            className={`project-item ${activeTab === 'calendar' && selectedProjectId === 'all' ? 'active' : ''}`}
+            onClick={() => {
+              setSelectedProjectId('all');
+              setActiveTab('calendar');
+            }}
+            style={{ justifyContent: sidebarCollapsed ? 'center' : 'flex-start', padding: sidebarCollapsed ? '0.6rem' : '0.75rem 1rem' }}
+            title={sidebarCollapsed ? "Mi Calendario" : undefined}
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-              <CalendarIcon size={18} />
-              <span>Mi Calendario</span>
+              <CalendarIcon size={18} style={{ flexShrink: 0 }} />
+              {!sidebarCollapsed && <span>Mi Calendario</span>}
             </div>
           </button>
 
           {(user.role === 'admin' || user.role === 'master_admin') && (
-            <button
-              className={`project-item ${activeTab === 'admin' ? 'active' : ''}`}
-              onClick={() => setActiveTab('admin')}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                <Users size={18} />
-                <span>Administración</span>
-              </div>
-            </button>
+            <>
+              <button
+                className={`project-item ${activeTab === 'admin' ? 'active' : ''}`}
+                onClick={() => setActiveTab('admin')}
+                style={{ justifyContent: sidebarCollapsed ? 'center' : 'flex-start', padding: sidebarCollapsed ? '0.6rem' : '0.75rem 1rem' }}
+                title={sidebarCollapsed ? "Administración" : undefined}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                  <Users size={18} style={{ flexShrink: 0 }} />
+                  {!sidebarCollapsed && <span>Administración</span>}
+                </div>
+              </button>
+
+              <button
+                className={`project-item ${activeTab === 'dashboard' ? 'active' : ''}`}
+                onClick={() => setActiveTab('dashboard')}
+                style={{ justifyContent: sidebarCollapsed ? 'center' : 'flex-start', padding: sidebarCollapsed ? '0.6rem' : '0.75rem 1rem' }}
+                title={sidebarCollapsed ? "Dashboard" : undefined}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                  <LayoutDashboard size={18} style={{ flexShrink: 0 }} />
+                  {!sidebarCollapsed && <span>Dashboard</span>}
+                </div>
+              </button>
+            </>
           )}
         </nav>
 
         {/* Projects list */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-          <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--muted-foreground)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Proyectos</span>
-          {(user.role === 'admin' || user.role === 'master_admin') && (
-            <button
-              style={{ background: 'transparent', border: 'none', color: 'var(--primary)', cursor: 'pointer', display: 'flex', padding: '0.25rem', borderRadius: '50%' }}
-              onClick={() => setShowCreateProjectModal(true)}
-              title="Crear Nuevo Proyecto"
-            >
-              <Plus size={16} />
-            </button>
-          )}
-        </div>
+        {!sidebarCollapsed ? (
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem', width: '100%' }}>
+            <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--muted-foreground)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Proyectos</span>
+            {(user.role === 'admin' || user.role === 'master_admin') && (
+              <button
+                style={{ background: 'transparent', border: 'none', color: 'var(--primary)', cursor: 'pointer', display: 'flex', padding: '0.25rem', borderRadius: '50%' }}
+                onClick={() => setShowCreateProjectModal(true)}
+                title="Crear Nuevo Proyecto"
+              >
+                <Plus size={16} />
+              </button>
+            )}
+          </div>
+        ) : (
+          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '0.5rem', width: '100%' }}>
+            {(user.role === 'admin' || user.role === 'master_admin') && (
+              <button
+                style={{ background: 'var(--primary)', border: 'none', color: 'var(--primary-foreground)', cursor: 'pointer', display: 'flex', padding: '0.4rem', borderRadius: '50%', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}
+                onClick={() => setShowCreateProjectModal(true)}
+                title="Crear Nuevo Proyecto"
+              >
+                <Plus size={16} />
+              </button>
+            )}
+          </div>
+        )}
 
         {projectsLoading ? (
-          <div style={{ display: 'flex', justifyContent: 'center', padding: '1rem' }}>
+          <div style={{ display: 'flex', justifyContent: 'center', padding: '1rem', width: '100%' }}>
             <Loader2 size={20} style={{ animation: 'spin 1s linear infinite', color: 'var(--muted-foreground)' }} />
           </div>
         ) : (
-          <div className="project-list">
+          <div className="project-list" style={{ width: '100%' }}>
             {projects.length === 0 ? (
-              <p style={{ fontSize: '0.8rem', color: 'var(--muted-foreground)', padding: '0.5rem', textAlign: 'center' }}>
-                Sin proyectos asignados.
-              </p>
+              !sidebarCollapsed && (
+                <p style={{ fontSize: '0.8rem', color: 'var(--muted-foreground)', padding: '0.5rem', textAlign: 'center' }}>
+                  Sin proyectos asignados.
+                </p>
+              )
             ) : (
               projects.map(p => (
                 <button
@@ -284,11 +342,12 @@ function App() {
                     setSelectedProjectId(p.id);
                     setActiveTab('calendar');
                   }}
-                  style={{ padding: '0.6rem 0.75rem', fontSize: '0.85rem' }}
+                  style={{ padding: sidebarCollapsed ? '0.6rem' : '0.6rem 0.75rem', fontSize: '0.85rem', justifyContent: sidebarCollapsed ? 'center' : 'flex-start' }}
+                  title={sidebarCollapsed ? p.name : undefined}
                 >
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', overflow: 'hidden' }}>
                     <Folder size={16} style={{ flexShrink: 0 }} />
-                    <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.name}</span>
+                    {!sidebarCollapsed && <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.name}</span>}
                   </div>
                 </button>
               ))
@@ -299,18 +358,50 @@ function App() {
         {/* Log Out button */}
         <button
           className="btn-secondary"
-          style={{ width: '100%', marginTop: 'auto', gap: '0.5rem', padding: '0.65rem' }}
+          style={{ width: '100%', marginTop: 'auto', gap: '0.5rem', padding: sidebarCollapsed ? '0.6rem' : '0.65rem', justifyContent: 'center' }}
           onClick={handleLogout}
+          title={sidebarCollapsed ? "Cerrar Sesión" : undefined}
         >
-          <LogOut size={16} />
-          Cerrar Sesión
+          <LogOut size={16} style={{ flexShrink: 0 }} />
+          {!sidebarCollapsed && <span>Cerrar Sesión</span>}
         </button>
       </aside>
 
       {/* Main Panel Content */}
       <main className="main-content">
+        <div className="mobile-header-bar" style={{ display: 'none' }}>
+          <button
+            type="button"
+            onClick={() => setSidebarCollapsed(false)}
+            style={{
+              padding: '0.5rem',
+              border: '1px solid var(--border)',
+              borderRadius: '6px',
+              background: 'hsl(var(--card))',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              cursor: 'pointer'
+            }}
+            title="Abrir menú"
+          >
+            <Menu size={20} />
+          </button>
+          <span style={{ fontFamily: 'var(--font-sans)', fontWeight: 800, fontSize: '1.2rem' }}>
+            Ibermex Cal
+          </span>
+        </div>
+
         {activeTab === 'calendar' ? (
-          activeProject ? (
+          selectedProjectId === 'all' ? (
+            <div style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
+              <div style={{ marginBottom: '1.5rem' }}>
+                <h1 style={{ margin: '0 0 0.25rem', fontSize: '2rem', fontWeight: 800 }}>Mi Calendario</h1>
+                <p style={{ color: 'var(--muted-foreground)', fontSize: '0.9rem' }}>Todas mis tareas asignadas en mis proyectos</p>
+              </div>
+              <CalendarGrid projectId="all" userRole={user.role} currentUserProfile={user} projects={projects} />
+            </div>
+          ) : activeProject ? (
             <div style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
               <div style={{ marginBottom: '1.5rem' }}>
                 <h1 style={{ margin: '0 0 0.25rem', fontSize: '2rem', fontWeight: 800 }}>{activeProject.name}</h1>
@@ -318,7 +409,7 @@ function App() {
                   <p style={{ color: 'var(--muted-foreground)', fontSize: '0.9rem' }}>{activeProject.description}</p>
                 )}
               </div>
-              <CalendarGrid projectId={activeProject.id} userRole={user.role} />
+              <CalendarGrid projectId={activeProject.id} userRole={user.role} currentUserProfile={user} projects={projects} />
             </div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', flex: 1, opacity: 0.6 }}>
@@ -335,7 +426,7 @@ function App() {
               )}
             </div>
           )
-        ) : (
+        ) : activeTab === 'admin' ? (
           (user.role === 'admin' || user.role === 'master_admin') && (
             <div style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
               <div style={{ marginBottom: '1.5rem' }}>
@@ -349,6 +440,17 @@ function App() {
                   projects={projects}
                   onProjectsUpdated={loadProjects}
                 />
+              </div>
+            </div>
+          )
+        ) : (
+          (user.role === 'admin' || user.role === 'master_admin') && (
+            <div style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
+              <div style={{ marginBottom: '1.5rem' }}>
+                <h1 style={{ margin: '0 0 0.25rem', fontSize: '2rem', fontWeight: 800 }}>Dashboard</h1>
+              </div>
+              <div style={{ flex: 1, overflowY: 'auto' }}>
+                <Dashboard projects={projects} />
               </div>
             </div>
           )

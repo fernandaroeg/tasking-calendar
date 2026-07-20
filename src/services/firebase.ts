@@ -1,28 +1,30 @@
 import { initializeApp } from 'firebase/app';
-import { 
-  getAuth, 
-  signInWithPopup, 
-  GoogleAuthProvider, 
-  signOut, 
+import {
+  getAuth,
+  signInWithPopup,
+  GoogleAuthProvider,
+  signOut,
   onAuthStateChanged as fbOnAuthStateChanged
 } from 'firebase/auth';
 import type { User as FirebaseUser } from 'firebase/auth';
-import { 
-  getFirestore, 
-  doc, 
-  getDoc, 
-  setDoc, 
-  collection, 
-  getDocs, 
-  query, 
-  where, 
-  addDoc, 
-  updateDoc, 
-  deleteDoc, 
+import {
+  getFirestore,
+  doc,
+  getDoc,
+  setDoc,
+  collection,
+  getDocs,
+  query,
+  where,
+  addDoc,
+  updateDoc,
+  deleteDoc,
   onSnapshot,
   Timestamp
 } from 'firebase/firestore';
 import type { UserProfile, Project, Task, PreApprovedUser } from '../../specs/001-project-task-calendar/contracts/firebase-service';
+
+import { getStorage } from 'firebase/storage';
 
 // Firebase client configuration from Vite environment variables
 const firebaseConfig = {
@@ -38,6 +40,7 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
 export const db = getFirestore(app);
+export const storage = getStorage(app);
 const googleProvider = new GoogleAuthProvider();
 
 // Current cached user profile to avoid repeated Firestore lookups
@@ -66,7 +69,7 @@ export const firebaseService = {
     try {
       const result = await signInWithPopup(auth, googleProvider);
       const user = result.user;
-      
+
       if (!user.email) {
         throw new Error("No email returned from Google account");
       }
@@ -75,7 +78,7 @@ export const firebaseService = {
       const emailLower = user.email.toLowerCase();
       const approvalDocRef = doc(db, 'pre_approved_users', emailLower);
       const approvalDocSnap = await getDoc(approvalDocRef);
-      
+
       if (!approvalDocSnap.exists()) {
         await signOut(auth);
         throw new Error(`UNAUTHORIZED: El correo ${user.email} no está en la lista de pre-aprobados.`);
@@ -87,7 +90,7 @@ export const firebaseService = {
       // Get or create user profile
       const userDocRef = doc(db, 'users', user.uid);
       const userDocSnap = await getDoc(userDocRef);
-      
+
       const now = new Date();
       let profile: UserProfile;
 
@@ -142,6 +145,42 @@ export const firebaseService = {
     return currentUserProfile;
   },
 
+  async getCurrentUserProfile(): Promise<UserProfile | null> {
+    if (currentUserProfile) return currentUserProfile;
+    const fbUser = auth.currentUser;
+    if (!fbUser) return null;
+
+    try {
+      const emailLower = fbUser.email?.toLowerCase();
+      if (!emailLower) return null;
+
+      const approvalDocRef = doc(db, 'pre_approved_users', emailLower);
+      const approvalDocSnap = await getDoc(approvalDocRef);
+      if (!approvalDocSnap.exists()) return null;
+
+      const role = approvalDocSnap.data()?.role || 'user';
+      const userDocRef = doc(db, 'users', fbUser.uid);
+      const userDocSnap = await getDoc(userDocRef);
+
+      if (userDocSnap.exists()) {
+        const udata = userDocSnap.data();
+        currentUserProfile = {
+          uid: fbUser.uid,
+          email: emailLower,
+          displayName: udata.displayName || fbUser.displayName || emailLower.split('@')[0],
+          photoURL: fbUser.photoURL || udata.photoURL || undefined,
+          role: role,
+          createdAt: parseFirestoreDate(udata.createdAt),
+          lastLogin: parseFirestoreDate(udata.lastLogin)
+        };
+        return currentUserProfile;
+      }
+    } catch (err) {
+      console.error("Error retrieving profile in getCurrentUserProfile:", err);
+    }
+    return null;
+  },
+
   onAuthStateChanged(callback: (user: UserProfile | null) => void): () => void {
     return fbOnAuthStateChanged(auth, async (fbUser: FirebaseUser | null) => {
       if (!fbUser) {
@@ -161,7 +200,7 @@ export const firebaseService = {
         // Fetch approval status
         const approvalDocRef = doc(db, 'pre_approved_users', emailLower);
         const approvalDocSnap = await getDoc(approvalDocRef);
-        
+
         if (!approvalDocSnap.exists()) {
           await signOut(auth);
           callback(null);
@@ -275,7 +314,7 @@ export const firebaseService = {
     if (!currentUserProfile || (currentUserProfile.role !== 'admin' && currentUserProfile.role !== 'master_admin')) {
       throw new Error("Only admins can create projects");
     }
-    
+
     const projectCol = collection(db, 'projects');
     const now = Timestamp.now();
     const docRef = await addDoc(projectCol, {
@@ -290,21 +329,21 @@ export const firebaseService = {
 
   async getProjects(): Promise<Project[]> {
     if (!currentUserProfile) return [];
-    
+
     const projectsCol = collection(db, 'projects');
     let q;
-    
+
     if (currentUserProfile.role === 'admin' || currentUserProfile.role === 'master_admin') {
       // Admin sees all projects
       q = query(projectsCol);
     } else {
       // Collaborator sees only projects where they are assigned (by email)
       q = query(
-        projectsCol, 
+        projectsCol,
         where('assignedUsers', 'array-contains', currentUserProfile.email)
       );
     }
-    
+
     const snap = await getDocs(q);
     const projects: Project[] = [];
     snap.forEach(doc => {
@@ -323,7 +362,6 @@ export const firebaseService = {
   },
 
   async getProject(projectId: string): Promise<Project | null> {
-    if (!currentUserProfile) return null;
     const docRef = doc(db, 'projects', projectId);
     const docSnap = await getDoc(docRef);
     if (!docSnap.exists()) return null;
@@ -344,6 +382,17 @@ export const firebaseService = {
     }
     const docRef = doc(db, 'projects', projectId);
     await updateDoc(docRef, { assignedUsers });
+  },
+
+  async updateProject(projectId: string, name: string, description?: string): Promise<void> {
+    if (!currentUserProfile || (currentUserProfile.role !== 'admin' && currentUserProfile.role !== 'master_admin')) {
+      throw new Error("Only admins can update projects");
+    }
+    const docRef = doc(db, 'projects', projectId);
+    await updateDoc(docRef, {
+      name,
+      description: description || ""
+    });
   },
 
   async deleteProject(projectId: string): Promise<void> {
@@ -369,8 +418,9 @@ export const firebaseService = {
 
   // Tasks
   async createTask(task: Omit<Task, 'id' | 'createdAt' | 'updatedAt' | 'createdBy'>): Promise<string> {
-    if (!currentUserProfile) throw new Error("Not authenticated");
-    
+    const profile = currentUserProfile || await this.getCurrentUserProfile();
+    if (!profile) throw new Error("Not authenticated");
+
     const tasksCol = collection(db, 'tasks');
     const now = Timestamp.now();
     const docRef = await addDoc(tasksCol, {
@@ -378,7 +428,7 @@ export const firebaseService = {
       title: task.title,
       dueDate: Timestamp.fromDate(task.dueDate),
       description: task.description,
-      assignedTo: task.assignedTo || null,
+      assignedTo: task.assignedTo || [],
       priority: task.priority,
       labels: task.labels,
       checklist: task.checklist,
@@ -386,22 +436,26 @@ export const firebaseService = {
       isRecurring: task.isRecurring || false,
       recurrenceStart: task.recurrenceStart ? Timestamp.fromDate(task.recurrenceStart) : null,
       recurrenceEnd: task.recurrenceEnd ? Timestamp.fromDate(task.recurrenceEnd) : null,
+      recurrenceDays: task.recurrenceDays || [],
       exceptions: task.exceptions ? task.exceptions.map(d => Timestamp.fromDate(d)) : [],
-      createdBy: currentUserProfile.uid,
+      createdBy: profile.uid,
       createdAt: now,
-      updatedAt: now
+      updatedAt: now,
+      completed: false,
+      attachments: task.attachments || []
     });
     return docRef.id;
   },
 
   async updateTask(taskId: string, updates: Partial<Omit<Task, 'id' | 'createdAt' | 'updatedAt' | 'createdBy'>>): Promise<void> {
-    if (!currentUserProfile) throw new Error("Not authenticated");
-    
+    const profile = currentUserProfile || await this.getCurrentUserProfile();
+    if (!profile) throw new Error("Not authenticated");
+
     const docRef = doc(db, 'tasks', taskId);
     const firestoreUpdates: any = {
       updatedAt: Timestamp.now()
     };
-    
+
     if (updates.title !== undefined) firestoreUpdates.title = updates.title;
     if (updates.dueDate !== undefined) firestoreUpdates.dueDate = Timestamp.fromDate(updates.dueDate);
     if (updates.description !== undefined) firestoreUpdates.description = updates.description;
@@ -412,12 +466,16 @@ export const firebaseService = {
     if (updates.isRecurring !== undefined) firestoreUpdates.isRecurring = updates.isRecurring;
     if (updates.recurrenceStart !== undefined) firestoreUpdates.recurrenceStart = updates.recurrenceStart ? Timestamp.fromDate(updates.recurrenceStart) : null;
     if (updates.recurrenceEnd !== undefined) firestoreUpdates.recurrenceEnd = updates.recurrenceEnd ? Timestamp.fromDate(updates.recurrenceEnd) : null;
+    if (updates.recurrenceDays !== undefined) firestoreUpdates.recurrenceDays = updates.recurrenceDays || [];
     if (updates.exceptions !== undefined) firestoreUpdates.exceptions = updates.exceptions ? updates.exceptions.map(d => Timestamp.fromDate(d)) : [];
+    if (updates.completed !== undefined) firestoreUpdates.completed = updates.completed;
+    if (updates.completedDates !== undefined) firestoreUpdates.completedDates = updates.completedDates || [];
+    if (updates.attachments !== undefined) firestoreUpdates.attachments = updates.attachments || [];
 
     if (updates.assignedTo !== undefined) {
-      firestoreUpdates.assignedTo = updates.assignedTo || null;
+      firestoreUpdates.assignedTo = updates.assignedTo || [];
     }
-    
+
     await updateDoc(docRef, firestoreUpdates);
   },
 
@@ -430,21 +488,30 @@ export const firebaseService = {
   subscribeToTasks(projectId: string, callback: (tasks: Task[]) => void): () => void {
     const tasksCol = collection(db, 'tasks');
     const q = query(
-      tasksCol, 
+      tasksCol,
       where('projectId', '==', projectId)
     );
-    
+
     return onSnapshot(q, (snap) => {
       const tasks: Task[] = [];
       snap.forEach(doc => {
         const data = doc.data();
+
+        // Robust backward-compatibility check for assignedTo (string vs string[])
+        let assignedTo: string[] = [];
+        if (Array.isArray(data.assignedTo)) {
+          assignedTo = data.assignedTo;
+        } else if (typeof data.assignedTo === 'string' && data.assignedTo) {
+          assignedTo = [data.assignedTo];
+        }
+
         tasks.push({
           id: doc.id,
           projectId: data.projectId,
           title: data.title,
           dueDate: parseFirestoreDate(data.dueDate),
           description: data.description || "",
-          assignedTo: data.assignedTo || undefined,
+          assignedTo: assignedTo,
           priority: data.priority || 'medium',
           labels: data.labels || [],
           checklist: data.checklist || [],
@@ -452,10 +519,14 @@ export const firebaseService = {
           isRecurring: data.isRecurring || false,
           recurrenceStart: data.recurrenceStart ? parseFirestoreDate(data.recurrenceStart) : undefined,
           recurrenceEnd: data.recurrenceEnd ? parseFirestoreDate(data.recurrenceEnd) : undefined,
+          recurrenceDays: data.recurrenceDays || [],
           exceptions: data.exceptions ? data.exceptions.map((ts: any) => parseFirestoreDate(ts)) : [],
           createdBy: data.createdBy,
           createdAt: parseFirestoreDate(data.createdAt || data.updatedAt || data.dueDate),
-          updatedAt: parseFirestoreDate(data.updatedAt)
+          updatedAt: parseFirestoreDate(data.updatedAt),
+          completed: data.completed || false,
+          completedDates: data.completedDates || [],
+          attachments: data.attachments || []
         });
       });
       // Sort in memory by createdAt to show them in the order they were created
@@ -464,5 +535,68 @@ export const firebaseService = {
     }, (error) => {
       console.error(`Error subscribing to tasks for project ${projectId}:`, error);
     });
+  },
+
+  subscribeToAllTasks(callback: (tasks: Task[]) => void): () => void {
+    const tasksCol = collection(db, 'tasks');
+
+    return onSnapshot(tasksCol, (snap) => {
+      const tasks: Task[] = [];
+      snap.forEach(doc => {
+        const data = doc.data();
+
+        // Robust backward-compatibility check for assignedTo (string vs string[])
+        let assignedTo: string[] = [];
+        if (Array.isArray(data.assignedTo)) {
+          assignedTo = data.assignedTo;
+        } else if (typeof data.assignedTo === 'string' && data.assignedTo) {
+          assignedTo = [data.assignedTo];
+        }
+
+        tasks.push({
+          id: doc.id,
+          projectId: data.projectId,
+          title: data.title,
+          dueDate: parseFirestoreDate(data.dueDate),
+          description: data.description || "",
+          assignedTo: assignedTo,
+          priority: data.priority || 'medium',
+          labels: data.labels || [],
+          checklist: data.checklist || [],
+          color: data.color || undefined,
+          isRecurring: data.isRecurring || false,
+          recurrenceStart: data.recurrenceStart ? parseFirestoreDate(data.recurrenceStart) : undefined,
+          recurrenceEnd: data.recurrenceEnd ? parseFirestoreDate(data.recurrenceEnd) : undefined,
+          recurrenceDays: data.recurrenceDays || [],
+          exceptions: data.exceptions ? data.exceptions.map((ts: any) => parseFirestoreDate(ts)) : [],
+          createdBy: data.createdBy,
+          createdAt: parseFirestoreDate(data.createdAt || data.updatedAt || data.dueDate),
+          updatedAt: parseFirestoreDate(data.updatedAt),
+          completed: data.completed || false,
+          completedDates: data.completedDates || [],
+          attachments: data.attachments || []
+        });
+      });
+      // Sort in memory by createdAt to show them in the order they were created
+      tasks.sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
+      callback(tasks);
+    }, (error) => {
+      console.error("Error subscribing to all tasks:", error);
+    });
   }
+};
+
+export const getUserColor = (email: string): string => {
+  const emailLower = email.trim().toLowerCase();
+  let hash = 0;
+  for (let i = 0; i < emailLower.length; i++) {
+    hash = ((hash << 5) - hash) + emailLower.charCodeAt(i);
+  }
+  const colors = [
+    '#FF6A52', // Ibermex Brand Coral Red
+    '#D97706', // Amber
+    '#F59E0B', // Yellow
+    '#6B7280'  // Gray
+  ];
+  return colors[Math.abs(hash) % colors.length];
 };

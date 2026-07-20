@@ -47,6 +47,13 @@ vi.mock('firebase/firestore', () => ({
   orderBy: vi.fn()
 }));
 
+vi.mock('firebase/storage', () => ({
+  getStorage: vi.fn(() => ({})),
+  ref: vi.fn(),
+  uploadBytes: vi.fn(),
+  getDownloadURL: vi.fn()
+}));
+
 // Import the service under test after mocks are defined
 import { firebaseService } from '../firebase';
 

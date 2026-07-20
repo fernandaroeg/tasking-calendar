@@ -1,137 +1,116 @@
-import React, { useRef, useState } from 'react';
+import React, { useRef, useEffect } from 'react';
 
 interface RichTextEditorProps {
   value: string;
   onChange: (value: string) => void;
   id?: string;
+  disabled?: boolean;
 }
 
-const RichTextEditor: React.FC<RichTextEditorProps> = ({ value, onChange, id }) => {
-  const [mode, setMode] = useState<'edit' | 'preview'>('edit');
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
+const RichTextEditor: React.FC<RichTextEditorProps> = ({ value, onChange, id, disabled = false }) => {
+  const editorRef = useRef<HTMLDivElement>(null);
+  const isEditing = useRef(false);
 
-  const insertTag = (tagOpen: string, tagClose: string) => {
-    const textarea = textareaRef.current;
-    if (!textarea) return;
+  // Sync value from prop to contentEditable div
+  useEffect(() => {
+    if (editorRef.current && !isEditing.current) {
+      editorRef.current.innerHTML = value || '';
+    }
+  }, [value]);
 
-    const start = textarea.selectionStart;
-    const end = textarea.selectionEnd;
-    const text = textarea.value;
-
-    const selectedText = text.substring(start, end);
-    const replacement = tagOpen + selectedText + tagClose;
-
-    const newValue = text.substring(0, start) + replacement + text.substring(end);
-    onChange(newValue);
-
-    // Reposition cursor after the inserted tags
-    setTimeout(() => {
-      textarea.focus();
-      textarea.setSelectionRange(start + tagOpen.length, start + tagOpen.length + selectedText.length);
-    }, 0);
+  const handleInput = () => {
+    if (editorRef.current) {
+      isEditing.current = true;
+      onChange(editorRef.current.innerHTML);
+    }
   };
 
-  const handleBold = () => insertTag('<strong>', '</strong>');
-  const handleItalic = () => insertTag('<em>', '</em>');
-  const handleHeading = () => insertTag('<h3>', '</h3>');
-  const handleList = () => insertTag('<ul>\n  <li>', '</li>\n</ul>');
+  const handleBlur = () => {
+    isEditing.current = false;
+  };
+
+  const format = (command: string, val: string = '') => {
+    if (disabled) return;
+    document.execCommand(command, false, val);
+    handleInput();
+  };
+
+  const handleBold = () => format('bold');
+  const handleItalic = () => format('italic');
+  const handleUnderline = () => format('underline');
+  const handleStrikethrough = () => format('strikeThrough');
+  const handleList = () => format('insertUnorderedList');
 
   return (
     <div className="rich-text-editor-container" style={{ display: 'flex', flexDirection: 'column' }}>
-      <div className="rich-text-toolbar" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <div style={{ display: 'flex', gap: '0.25rem' }}>
+      {!disabled && (
+        <div className="rich-text-toolbar" style={{ display: 'flex', gap: '0.25rem', padding: '0.5rem', alignItems: 'center' }}>
           <button 
             type="button" 
             className="rich-text-btn" 
-            onClick={handleBold} 
-            disabled={mode === 'preview'}
+            onMouseDown={(e) => { e.preventDefault(); handleBold(); }}
             title="Negrita"
+            style={{ fontWeight: 700 }}
           >
-            <strong>B</strong>
+            B
           </button>
           <button 
             type="button" 
             className="rich-text-btn" 
-            onClick={handleItalic} 
-            disabled={mode === 'preview'}
+            onMouseDown={(e) => { e.preventDefault(); handleItalic(); }}
             title="Itálica"
+            style={{ fontStyle: 'italic' }}
           >
-            <em>I</em>
+            I
           </button>
           <button 
             type="button" 
             className="rich-text-btn" 
-            onClick={handleHeading} 
-            disabled={mode === 'preview'}
-            title="Encabezado"
+            onMouseDown={(e) => { e.preventDefault(); handleUnderline(); }}
+            title="Subrayado"
+            style={{ textDecoration: 'underline' }}
           >
-            H3
+            U
           </button>
           <button 
             type="button" 
             className="rich-text-btn" 
-            onClick={handleList} 
-            disabled={mode === 'preview'}
+            onMouseDown={(e) => { e.preventDefault(); handleStrikethrough(); }}
+            title="Tachado"
+            style={{ textDecoration: 'line-through' }}
+          >
+            S
+          </button>
+          <button 
+            type="button" 
+            className="rich-text-btn" 
+            onMouseDown={(e) => { e.preventDefault(); handleList(); }}
             title="Lista de viñetas"
           >
             • Lista
           </button>
         </div>
-
-        {/* Edit / Preview Toggle Tabs */}
-        <div style={{ display: 'flex', gap: '0.25rem', paddingRight: '0.25rem' }}>
-          <button
-            type="button"
-            className="rich-text-btn"
-            style={{ 
-              fontWeight: mode === 'edit' ? 700 : 400,
-              backgroundColor: mode === 'edit' ? 'rgba(255, 255, 255, 0.08)' : 'transparent',
-              padding: '0.25rem 0.6rem',
-              borderRadius: '4px'
-            }}
-            onClick={() => setMode('edit')}
-          >
-            Editar
-          </button>
-          <button
-            type="button"
-            className="rich-text-btn"
-            style={{ 
-              fontWeight: mode === 'preview' ? 700 : 400,
-              backgroundColor: mode === 'preview' ? 'rgba(255, 255, 255, 0.08)' : 'transparent',
-              padding: '0.25rem 0.6rem',
-              borderRadius: '4px'
-            }}
-            onClick={() => setMode('preview')}
-          >
-            Vista Previa
-          </button>
-        </div>
-      </div>
-
-      {mode === 'edit' ? (
-        <textarea
-          id={id}
-          ref={textareaRef}
-          className="rich-text-textarea"
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          placeholder="Escribe la descripción de la tarea aquí (puedes usar la barra de herramientas para dar formato)..."
-        />
-      ) : (
-        <div
-          className="rich-text-textarea"
-          style={{ 
-            minHeight: '120px', 
-            overflowY: 'auto', 
-            background: 'transparent',
-            padding: '1rem',
-            lineHeight: 1.5,
-            color: 'hsl(var(--text-h))'
-          }}
-          dangerouslySetInnerHTML={{ __html: value || '<p style="opacity: 0.5; font-style: italic;">Sin descripción.</p>' }}
-        />
       )}
+
+      <div
+        id={id}
+        ref={editorRef}
+        contentEditable={!disabled}
+        className="rich-text-textarea"
+        style={{ 
+          minHeight: '120px', 
+          overflowY: 'auto', 
+          background: disabled ? 'rgba(28, 28, 28, 0.03)' : '#ffffff',
+          padding: '1rem',
+          lineHeight: 1.5,
+          color: 'hsl(var(--text))',
+          outline: 'none',
+          borderTop: disabled ? '1px solid hsl(var(--border))' : 'none',
+          borderRadius: disabled ? '8px' : '0'
+        }}
+        onInput={handleInput}
+        onBlur={handleBlur}
+      />
     </div>
   );
 };

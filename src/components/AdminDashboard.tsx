@@ -22,6 +22,26 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ projects, onProjectsUpd
   // Active Project Membership management
   const [selectedProjectId, setSelectedProjectId] = useState<string>('');
 
+  // Project editing states
+  const [isEditingProject, setIsEditingProject] = useState(false);
+  const [editProjectName, setEditProjectName] = useState('');
+  const [editProjectDescription, setEditProjectDescription] = useState('');
+
+  const handleSaveProjectEdit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedProjectId || !editProjectName.trim()) return;
+
+    try {
+      await firebaseService.updateProject(selectedProjectId, editProjectName.trim(), editProjectDescription.trim());
+      setIsEditingProject(false);
+      await onProjectsUpdated();
+      alert("Proyecto actualizado exitosamente.");
+    } catch (err) {
+      console.error("Error updating project details:", err);
+      alert("Error al actualizar los detalles del proyecto.");
+    }
+  };
+
   useEffect(() => {
     loadWhitelist();
     loadUsers();
@@ -32,9 +52,11 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ projects, onProjectsUpd
       const exists = projects.some(p => p.id === selectedProjectId);
       if (!exists) {
         setSelectedProjectId(projects[0].id);
+        setIsEditingProject(false);
       }
     } else {
       setSelectedProjectId('');
+      setIsEditingProject(false);
     }
   }, [projects, selectedProjectId]);
 
@@ -156,7 +178,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ projects, onProjectsUpd
     <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid hsl(var(--border))', paddingBottom: '1rem' }}>
         <div>
-          <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: '1.75rem', fontWeight: 700, color: 'var(--text-h)' }}>Control de Accesos</h2>
+          <h2 style={{ fontFamily: 'var(--font-sans)', fontSize: '1.75rem', fontWeight: 800, color: 'var(--text-h)', letterSpacing: '-0.02em' }}>Control de Accesos</h2>
           <p style={{ color: 'hsl(var(--muted-foreground))', fontSize: '0.9rem', marginTop: '0.25rem' }}>
             Gestiona la lista de correos aprobados y la asignación de colaboradores a proyectos.
           </p>
@@ -166,7 +188,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ projects, onProjectsUpd
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem' }}>
         {/* Whitelist / Pre-approved Users Column */}
         <section className="glass-panel admin-card" style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-          <h3 style={{ fontFamily: 'var(--font-serif)', fontSize: '1.2rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--text-h)', paddingLeft: '1rem'}}>
+          <h3 style={{ fontFamily: 'var(--font-sans)', fontSize: '1.2rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--text-h)', paddingLeft: '1rem'}}>
             <Mail size={18} style={{ color: 'hsl(var(--primary))' }} />
             Usuarios Pre-aprobados
           </h3>
@@ -249,7 +271,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ projects, onProjectsUpd
 
         {/* Project Membership Column */}
         <section className="glass-panel admin-card" style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-          <h3 style={{ fontFamily: 'var(--font-serif)', fontSize: '1.2rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--text-h)', paddingLeft: '1rem' }}>
+          <h3 style={{ fontFamily: 'var(--font-sans)', fontSize: '1.2rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--text-h)', paddingLeft: '1rem' }}>
             <FolderOpen size={18} style={{ color: 'hsl(var(--primary))' }} />
             Asignación de Usuarios a Proyectos
           </h3>
@@ -265,20 +287,74 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ projects, onProjectsUpd
             </div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem', flex: 1, paddingLeft: '1rem' }}>
-              {/* Select Project to Manage */}
-              <div className="form-group">
-                <label htmlFor="admin-project-select" className="form-label font-label">Seleccionar Proyecto</label>
-                <select
-                  id="admin-project-select"
-                  className="form-select"
-                  value={selectedProjectId}
-                  onChange={(e) => setSelectedProjectId(e.target.value)}
-                >
-                  {projects.map(p => (
-                    <option key={p.id} value={p.id}>{p.name}</option>
-                  ))}
-                </select>
-              </div>
+              {/* Select Project or Edit Form */}
+              {isEditingProject ? (
+                <form onSubmit={handleSaveProjectEdit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem', border: '1px solid hsl(var(--border))', padding: '1rem', borderRadius: 'var(--radius)', backgroundColor: 'hsl(var(--secondary) / 0.1)' }}>
+                  <h4 style={{ fontSize: '0.9rem', fontWeight: 700, margin: 0 }}>Editar Detalles del Proyecto</h4>
+                  <div className="form-group">
+                    <label htmlFor="edit-project-name" className="form-label font-label">Nombre del Proyecto</label>
+                    <input
+                      id="edit-project-name"
+                      type="text"
+                      required
+                      className="form-input"
+                      value={editProjectName}
+                      onChange={(e) => setEditProjectName(e.target.value)}
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label htmlFor="edit-project-desc" className="form-label font-label">Descripción</label>
+                    <textarea
+                      id="edit-project-desc"
+                      className="form-input"
+                      style={{ minHeight: '60px', resize: 'vertical' }}
+                      value={editProjectDescription}
+                      onChange={(e) => setEditProjectDescription(e.target.value)}
+                    />
+                  </div>
+                  <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end' }}>
+                    <button type="button" className="btn-secondary" style={{ padding: '0.4rem 1rem', fontSize: '0.85rem' }} onClick={() => setIsEditingProject(false)}>
+                      Cancelar
+                    </button>
+                    <button type="submit" className="btn-primary" style={{ padding: '0.4rem 1rem', fontSize: '0.85rem' }}>
+                      Guardar
+                    </button>
+                  </div>
+                </form>
+              ) : (
+                <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-end' }}>
+                  <div className="form-group" style={{ flex: 1 }}>
+                    <label htmlFor="admin-project-select" className="form-label font-label">Seleccionar Proyecto</label>
+                    <select
+                      id="admin-project-select"
+                      className="form-select"
+                      value={selectedProjectId}
+                      onChange={(e) => {
+                        setSelectedProjectId(e.target.value);
+                        setIsEditingProject(false);
+                      }}
+                    >
+                      {projects.map(p => (
+                        <option key={p.id} value={p.id}>{p.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <button
+                    type="button"
+                    className="btn-secondary"
+                    style={{ height: '42px', padding: '0 1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+                    onClick={() => {
+                      if (activeProject) {
+                        setEditProjectName(activeProject.name);
+                        setEditProjectDescription(activeProject.description || '');
+                        setIsEditingProject(true);
+                      }
+                    }}
+                  >
+                    Editar Proyecto
+                  </button>
+                </div>
+              )}
 
               {/* Members Checklist for Active Project */}
               {activeProject && (
