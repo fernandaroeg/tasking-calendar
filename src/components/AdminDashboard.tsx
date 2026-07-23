@@ -185,7 +185,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ projects, onProjectsUpd
         </div>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem' }}>
+      <div className="admin-grid">
         {/* Whitelist / Pre-approved Users Column */}
         <section className="glass-panel admin-card" style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
           <h3 style={{ fontFamily: 'var(--font-sans)', fontSize: '1.2rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--text-h)', paddingLeft: '1rem'}}>
@@ -208,7 +208,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ projects, onProjectsUpd
               />
             </div>
             
-            <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-end' }}>
+            <div className="whitelist-form-row" style={{ gap: '1rem' }}>
               <div className="form-group" style={{ flex: 1, marginBottom: 0 }}>
                 <label htmlFor="whitelist-role" className="form-label">Rol de Usuario</label>
                 <select

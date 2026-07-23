@@ -65,5 +65,11 @@ service cloud.firestore {
       
       allow delete: if isAdmin() || (isAuthenticated() && isApproved() && isMemberOfProject(resource.data.projectId));
     }
+
+    // User notes rules
+    match /user_notes/{noteId} {
+      allow read, delete: if isAuthenticated() && isApproved() && resource.data.userId == request.auth.uid;
+      allow create, update: if isAuthenticated() && isApproved() && request.resource.data.userId == request.auth.uid;
+    }
   }
 }

@@ -62,6 +62,15 @@ export interface Task {
   attachments?: { name: string; url: string }[];
 }
 
+export interface Note {
+  id: string;
+  userId: string;
+  title: string;
+  content: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
 /**
  * Service wrapper interface for database and auth interactions.
  */
@@ -91,4 +100,9 @@ export interface IFirebaseService {
   deleteTask(taskId: string): Promise<void>;
   subscribeToTasks(projectId: string, callback: (tasks: Task[]) => void): () => void; // Real-time sync listener
   subscribeToAllTasks(callback: (tasks: Task[]) => void): () => void; // Real-time sync listener for all tasks
+
+  // Notes
+  subscribeToUserNotes(userId: string, callback: (notes: Note[]) => void): () => void;
+  saveUserNote(note: { id?: string; userId: string; title: string; content: string }): Promise<string>;
+  deleteUserNote(noteId: string): Promise<void>;
 }

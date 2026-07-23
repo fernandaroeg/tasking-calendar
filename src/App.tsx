@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { LogIn, LogOut, Calendar as CalendarIcon, ShieldAlert, Folder, Plus, Users, Loader2, X, Check, ChevronLeft, ChevronRight, LayoutDashboard, Menu } from 'lucide-react';
+import { LogIn, LogOut, Calendar as CalendarIcon, ShieldAlert, Folder, Plus, Users, Loader2, X, Check, ChevronLeft, ChevronRight, LayoutDashboard, Menu, FileText } from 'lucide-react';
 import { firebaseService } from './services/firebase';
 import type { UserProfile, Project, PreApprovedUser } from '../specs/001-project-task-calendar/contracts/firebase-service';
 import CalendarGrid from './components/CalendarGrid';
+import UserDashboard from './components/UserDashboard';
+import UserNotes from './components/UserNotes';
 import AdminDashboard from './components/AdminDashboard';
 import Dashboard from './components/Dashboard';
 import logoIbermex2025 from './assets/logo_ibermex_2025.png';
@@ -17,6 +19,7 @@ function App() {
   const [activeTab, setActiveTab] = useState<'calendar' | 'admin' | 'dashboard'>('calendar');
   const [projects, setProjects] = useState<Project[]>([]);
   const [selectedProjectId, setSelectedProjectId] = useState<string>('all');
+  const [myCalendarSubTab, setMyCalendarSubTab] = useState<'calendar' | 'dashboard' | 'notes'>('calendar');
   const [projectsLoading, setProjectsLoading] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
@@ -395,11 +398,52 @@ function App() {
         {activeTab === 'calendar' ? (
           selectedProjectId === 'all' ? (
             <div style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
-              <div style={{ marginBottom: '1.5rem' }}>
-                <h1 style={{ margin: '0 0 0.25rem', fontSize: '2rem', fontWeight: 800 }}>Mi Calendario</h1>
-                <p style={{ color: 'var(--muted-foreground)', fontSize: '0.9rem' }}>Todas mis tareas asignadas en mis proyectos</p>
+              <div style={{ marginBottom: '1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1rem' }}>
+                <div>
+                  <h1 style={{ margin: '0 0 0.25rem', fontSize: '2rem', fontWeight: 800 }}>Mi Calendario</h1>
+                  <p style={{ color: 'var(--muted-foreground)', fontSize: '0.9rem' }}>Todas mis tareas asignadas en mis proyectos</p>
+                </div>
+
+                {/* Sub-tabs horizontal bar */}
+                <div className="asana-sub-tabs" style={{ display: 'flex', gap: '0.5rem', alignSelf: 'flex-end' }}>
+                  <button
+                    onClick={() => setMyCalendarSubTab('calendar')}
+                    className={`asana-sub-tab-btn ${myCalendarSubTab === 'calendar' ? 'active' : ''}`}
+                  >
+                    <CalendarIcon size={16} />
+                    Calendario
+                  </button>
+                  <button
+                    onClick={() => setMyCalendarSubTab('dashboard')}
+                    className={`asana-sub-tab-btn ${myCalendarSubTab === 'dashboard' ? 'active' : ''}`}
+                  >
+                    <LayoutDashboard size={16} />
+                    Panel de Usuario
+                  </button>
+                  <button
+                    onClick={() => setMyCalendarSubTab('notes')}
+                    className={`asana-sub-tab-btn ${myCalendarSubTab === 'notes' ? 'active' : ''}`}
+                  >
+                    <FileText size={16} />
+                    Notas
+                  </button>
+                </div>
               </div>
-              <CalendarGrid projectId="all" userRole={user.role} currentUserProfile={user} projects={projects} />
+
+              {/* Conditionally render content */}
+              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+                {myCalendarSubTab === 'calendar' ? (
+                  <CalendarGrid projectId="all" userRole={user.role} currentUserProfile={user} projects={projects} />
+                ) : myCalendarSubTab === 'dashboard' ? (
+                  <div style={{ flex: 1, overflowY: 'auto', padding: '2px' }}>
+                    <UserDashboard currentUserProfile={user} projects={projects} />
+                  </div>
+                ) : (
+                  <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+                    <UserNotes currentUserProfile={user} />
+                  </div>
+                )}
+              </div>
             </div>
           ) : activeProject ? (
             <div style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>

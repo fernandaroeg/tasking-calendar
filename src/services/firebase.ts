@@ -22,7 +22,7 @@ import {
   onSnapshot,
   Timestamp
 } from 'firebase/firestore';
-import type { UserProfile, Project, Task, PreApprovedUser } from '../../specs/001-project-task-calendar/contracts/firebase-service';
+import type { UserProfile, Project, Task, PreApprovedUser, Note } from '../../specs/001-project-task-calendar/contracts/firebase-service';
 
 import { getStorage } from 'firebase/storage';
 
@@ -583,6 +583,67 @@ export const firebaseService = {
     }, (error) => {
       console.error("Error subscribing to all tasks:", error);
     });
+  },
+
+  // Notes CRUD
+  subscribeToUserNotes(userId: string, callback: (notes: Note[]) => void): () => void {
+    const q = query(
+      collection(db, 'user_notes'),
+      where('userId', '==', userId)
+    );
+
+    return onSnapshot(q, (snapshot) => {
+      const notes: Note[] = [];
+      snapshot.forEach((docSnap) => {
+        const data = docSnap.data();
+        notes.push({
+          id: docSnap.id,
+          userId: data.userId,
+          title: data.title || '',
+          content: data.content || '',
+          createdAt: parseFirestoreDate(data.createdAt || data.updatedAt),
+          updatedAt: parseFirestoreDate(data.updatedAt)
+        });
+      });
+      // Sort notes by updatedAt descending in memory
+      notes.sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime());
+      callback(notes);
+    }, (error) => {
+      console.error("Error subscribing to user notes:", error);
+      callback([]);
+    });
+  },
+
+  async saveUserNote(note: { id?: string; userId: string; title: string; content: string }): Promise<string> {
+    const { id, userId, title, content } = note;
+    const now = new Date();
+    
+    if (id) {
+      // Update existing note
+      const docRef = doc(db, 'user_notes', id);
+      await updateDoc(docRef, {
+        title,
+        content,
+        updatedAt: now
+      });
+      return id;
+    } else {
+      // Create new note
+      const colRef = collection(db, 'user_notes');
+      const docRef = await addDoc(colRef, {
+        userId,
+        title,
+        content,
+        createdAt: now,
+        updatedAt: now
+      });
+      return docRef.id;
+    }
+  },
+
+  async deleteUserNote(noteId: string): Promise<void> {
+    const docRef = doc(db, 'user_notes', noteId);
+    await deleteDoc(docRef);
   }
 };
 

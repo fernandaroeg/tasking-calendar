@@ -311,7 +311,7 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({ projectId, userRole, curren
 
     return (
       <div className="calendar-container" style={{ height: '100%', display: 'flex', flexDirection: 'column', overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
-        <div style={{ minWidth: '750px', display: 'flex', flexDirection: 'column', flex: 1, height: '100%' }}>
+        <div style={{ minWidth: '950px', display: 'flex', flexDirection: 'column', flex: 1, height: '100%' }}>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '1px', marginBottom: '1px', flexShrink: 0 }}>
             {dayNames.map(name => (
               <div key={name} className="calendar-day-header">{name}</div>
@@ -349,7 +349,7 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({ projectId, userRole, curren
 
     return (
       <div className="calendar-container" style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '1px', flex: 1, minHeight: '400px', minWidth: '750px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '1px', flex: 1, minHeight: '400px', minWidth: '950px' }}>
           {weekDays.map((date, idx) => {
             const isToday = 
               today.getDate() === date.getDate() && 
@@ -499,7 +499,7 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({ projectId, userRole, curren
                               </div>
                             )}
                             
-                            <span style={{ fontWeight: 700, textDecoration: isCompleted ? 'line-through' : 'none', opacity: isCompleted ? 0.6 : 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                            <span className="calendar-task-title" style={{ fontWeight: 700, textDecoration: isCompleted ? 'line-through' : 'none', opacity: isCompleted ? 0.6 : 1, whiteSpace: 'normal', wordBreak: 'break-word' }}>
                               {task.title}
                             </span>
                           </div>
@@ -646,7 +646,7 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({ projectId, userRole, curren
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', flex: 1, minWidth: 0 }}>
                 {/* Row 1: Title (left) & Kebab (right) */}
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', gap: '0.35rem' }}>
-                  <span className="calendar-task-title" style={{ flex: 1, fontWeight: 600, fontSize: '0.8rem', textDecoration: isCompleted ? 'line-through' : 'none', opacity: isCompleted ? 0.6 : 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  <span className="calendar-task-title" style={{ flex: 1, fontWeight: 600, fontSize: '0.8rem', textDecoration: isCompleted ? 'line-through' : 'none', opacity: isCompleted ? 0.6 : 1 }}>
                     {task.title}
                   </span>
 
@@ -774,25 +774,27 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({ projectId, userRole, curren
     <div style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
       {/* Calendar Navigation Toolbar */}
       <div className="calendar-header-toolbar" style={{ gap: '1rem' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-          <button className="btn-primary" style={{ gap: '0.5rem' }} onClick={() => handleOpenCreateModal(selectedDate)}>
-            <Plus size={16} />
-            Nueva Tarea
-          </button>
+        <div className="calendar-header-left">
+          <div className="calendar-header-left-buttons">
+            <button className="btn-primary" style={{ gap: '0.5rem' }} onClick={() => handleOpenCreateModal(selectedDate)}>
+              <Plus size={16} />
+              Nueva Tarea
+            </button>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-            <button className="btn-secondary" style={{ padding: '0.5rem' }} onClick={handlePrev}>
-              <ChevronLeft size={16} />
-            </button>
-            <button className="btn-secondary" style={{ padding: '0.5rem 1rem' }} onClick={handleToday}>
-              Hoy
-            </button>
-            <button className="btn-secondary" style={{ padding: '0.5rem' }} onClick={handleNext}>
-              <ChevronRight size={16} />
-            </button>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+              <button className="btn-secondary" style={{ padding: '0.5rem' }} onClick={handlePrev}>
+                <ChevronLeft size={16} />
+              </button>
+              <button className="btn-secondary" style={{ padding: '0.5rem 1rem' }} onClick={handleToday}>
+                Hoy
+              </button>
+              <button className="btn-secondary" style={{ padding: '0.5rem' }} onClick={handleNext}>
+                <ChevronRight size={16} />
+              </button>
+            </div>
           </div>
 
-          <h2 style={{ fontFamily: 'var(--font-sans)', fontSize: '1.5rem', fontWeight: 800, color: 'var(--text-h)', letterSpacing: '-0.02em', margin: 0 }}>
+          <h2 className="calendar-header-title" style={{ fontFamily: 'var(--font-sans)', fontSize: '1.5rem', fontWeight: 800, color: 'var(--text-h)', letterSpacing: '-0.02em', margin: 0 }}>
             {getHeaderTitle()}
           </h2>
         </div>

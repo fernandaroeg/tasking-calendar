@@ -5,9 +5,11 @@ interface RichTextEditorProps {
   onChange: (value: string) => void;
   id?: string;
   disabled?: boolean;
+  style?: React.CSSProperties;
+  textareaStyle?: React.CSSProperties;
 }
 
-const RichTextEditor: React.FC<RichTextEditorProps> = ({ value, onChange, id, disabled = false }) => {
+const RichTextEditor: React.FC<RichTextEditorProps> = ({ value, onChange, id, disabled = false, style, textareaStyle }) => {
   const editorRef = useRef<HTMLDivElement>(null);
   const isEditing = useRef(false);
 
@@ -42,7 +44,7 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ value, onChange, id, di
   const handleList = () => format('insertUnorderedList');
 
   return (
-    <div className="rich-text-editor-container" style={{ display: 'flex', flexDirection: 'column' }}>
+    <div className="rich-text-editor-container" style={{ display: 'flex', flexDirection: 'column', ...style }}>
       {!disabled && (
         <div className="rich-text-toolbar" style={{ display: 'flex', gap: '0.25rem', padding: '0.5rem', alignItems: 'center' }}>
           <button 
@@ -106,7 +108,8 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ value, onChange, id, di
           color: 'hsl(var(--text))',
           outline: 'none',
           borderTop: disabled ? '1px solid hsl(var(--border))' : 'none',
-          borderRadius: disabled ? '8px' : '0'
+          borderRadius: disabled ? '8px' : '0',
+          ...textareaStyle
         }}
         onInput={handleInput}
         onBlur={handleBlur}

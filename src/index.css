@@ -368,8 +368,9 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .calendar-cell.selected-day {
-  background: hsla(var(--primary) / 0.03) !important;
-  box-shadow: inset 0 0 0 2px hsl(var(--primary)) !important;
+  background: rgba(128, 129, 133, 0.29) !important;
+  box-shadow: inset 0 0 0 2px rgba(128, 129, 133, 0.29) !important;
+  border-radius: var(--radius) !important;
 }
 
 .calendar-cell.today .day-number {
@@ -493,6 +494,7 @@ h1, h2, h3, h4, h5, h6 {
   border-radius: var(--radius);
   background: hsl(var(--card));
   overflow: hidden;
+  width: 100%;
 }
 
 .rich-text-toolbar {
@@ -747,6 +749,30 @@ strong, b, .rich-text-textarea strong, .rich-text-textarea b {
   color: #ffffff;
 }
 
+/* Admin grid and calendar left toolbar desktop defaults */
+.admin-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2rem;
+}
+
+.calendar-header-left {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.calendar-header-left-buttons {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.whitelist-form-row {
+  display: flex;
+  align-items: flex-end;
+}
+
 /* Mobile responsiveness styling */
 @media (max-width: 768px) {
   .app-container {
@@ -838,10 +864,245 @@ strong, b, .rich-text-textarea strong, .rich-text-textarea b {
     min-width: unset !important;
     margin-bottom: 0.25rem !important;
   }
+
+  .admin-grid {
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+  }
+
+  .calendar-header-left {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.75rem;
+    width: 100%;
+  }
+
+  .calendar-header-left-buttons {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    width: 100%;
+  }
+
+  .calendar-header-title {
+    font-size: 1.4rem !important;
+    text-align: left;
+    width: 100%;
+    margin-top: 0.25rem;
+  }
+
+  .whitelist-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+    padding: 0.75rem 1rem;
+  }
+  
+  .whitelist-item > div:last-child {
+    display: flex;
+    justify-content: space-between;
+    width: 100%;
+    align-items: center;
+    border-top: 1px solid hsl(var(--border) / 0.5);
+    padding-top: 0.5rem;
+    margin-top: 0.25rem;
+  }
+
+  .whitelist-form-row {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.75rem !important;
+  }
+  
+  .whitelist-form-row button {
+    width: 100%;
+    margin-top: 0.5rem;
+  }
 }
 
 @media (min-width: 769px) {
   .mobile-header-bar {
     display: none !important;
+  }
+}
+
+/* ---------------------------------------------------------
+ * Asana Sub-Tabs Layout & Styling
+ * --------------------------------------------------------- */
+.asana-sub-tabs {
+  display: flex;
+  border-bottom: 2px solid hsl(var(--border) / 0.5);
+  padding-bottom: 0px;
+}
+
+.asana-sub-tab-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: hsl(var(--muted-foreground));
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  margin-bottom: -2px;
+}
+
+.asana-sub-tab-btn:hover {
+  color: hsl(var(--text));
+}
+
+.asana-sub-tab-btn.active {
+  color: hsl(var(--primary));
+  border-bottom-color: hsl(var(--primary));
+}
+
+/* ---------------------------------------------------------
+ * User Dashboard Metrics & Tables
+ * --------------------------------------------------------- */
+.metrics-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1.5rem;
+  width: 100%;
+}
+
+.metric-card {
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.metric-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.metric-card-title {
+  font-size: 0.85rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: hsl(var(--muted-foreground));
+}
+
+.metric-card-icon {
+  opacity: 0.8;
+}
+
+.metric-card-value {
+  font-size: 2.25rem;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.metric-card-desc {
+  font-size: 0.75rem;
+  color: hsl(var(--muted-foreground));
+}
+
+.dashboard-tab-btn {
+  padding: 0.4rem 0.8rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: hsl(var(--muted-foreground));
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.dashboard-tab-btn:hover {
+  color: hsl(var(--text));
+  background: rgba(28, 28, 28, 0.04);
+}
+
+.dashboard-tab-btn.active {
+  color: #ffffff;
+  background: hsl(var(--text)) !important;
+}
+
+.user-dashboard-table th {
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: hsl(var(--muted-foreground));
+  border-bottom: 2px solid hsl(var(--border) / 0.5);
+}
+
+.user-dashboard-row {
+  transition: background-color 0.15s ease;
+}
+
+.user-dashboard-row:hover {
+  background-color: rgba(28, 28, 28, 0.02);
+}
+
+/* ---------------------------------------------------------
+ * User Notes Layout & Styling
+ * --------------------------------------------------------- */
+.notes-layout-container {
+  background: hsl(var(--card));
+  border: 1px solid hsl(var(--border));
+  border-radius: var(--radius);
+}
+
+.note-list-item:hover {
+  background: rgba(28, 28, 28, 0.02);
+}
+
+.notes-list-scroll::-webkit-scrollbar {
+  width: 6px;
+}
+
+.notes-list-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.notes-list-scroll::-webkit-scrollbar-thumb {
+  background: hsl(var(--border));
+  border-radius: 3px;
+}
+
+/* ---------------------------------------------------------
+ * Responsive Overrides for Sub-navigation
+ * --------------------------------------------------------- */
+@media (max-width: 768px) {
+  .notes-layout-container {
+    flex-direction: column !important;
+    height: auto !important;
+    min-height: 500px;
+  }
+
+  .notes-sidebar {
+    width: 100% !important;
+    border-right: none !important;
+    border-bottom: 1px solid hsl(var(--border));
+    max-height: 250px;
+  }
+
+  .notes-editor-panel {
+    width: 100% !important;
+    flex: 1;
+    min-height: 350px;
+  }
+
+  .asana-sub-tabs {
+    width: 100%;
+    justify-content: space-between;
+    margin-top: 0.75rem;
+  }
+
+  .asana-sub-tab-btn {
+    padding: 0.4rem 0.6rem;
+    font-size: 0.8rem;
   }
 }
