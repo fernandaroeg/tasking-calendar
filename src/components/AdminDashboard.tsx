@@ -93,6 +93,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ projects, onProjectsUpd
       await firebaseService.addPreApprovedUser(newEmail, newRole);
       setNewEmail('');
       await loadWhitelist();
+      alert("Nuevo usuario agregado\nCorreo de bienvenida enviado");
     } catch (err) {
       console.error("Error adding to whitelist:", err);
       alert("Error al agregar correo a la whitelist.");
@@ -127,6 +128,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ projects, onProjectsUpd
     if (!project) return;
 
     let updatedUsers = [...project.assignedUsers];
+    const isAdding = !updatedUsers.includes(userId);
     if (updatedUsers.includes(userId)) {
       // Remove
       updatedUsers = updatedUsers.filter(uid => uid !== userId);
@@ -138,6 +140,9 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ projects, onProjectsUpd
     try {
       await firebaseService.updateProjectMembers(selectedProjectId, updatedUsers);
       await onProjectsUpdated();
+      if (isAdding) {
+        alert("Usuario asignado a proyecto.\nCorreo de notificacion enviado");
+      }
     } catch (err) {
       console.error("Error updating project members:", err);
       alert("Error al actualizar los miembros del proyecto.");
@@ -219,9 +224,6 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ projects, onProjectsUpd
                 >
                   <option value="user">Colaborador (User)</option>
                   <option value="admin">Administrador (Admin)</option>
-                  {firebaseService.getCurrentUser()?.role === 'master_admin' && (
-                    <option value="master_admin">Master Admin (master_admin)</option>
-                  )}
                 </select>
               </div>
               <button type="submit" className="btn-primary" style={{ padding: '0.6rem 1.25rem' }} disabled={submittingWhitelist}>

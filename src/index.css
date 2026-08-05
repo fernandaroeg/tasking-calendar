@@ -857,7 +857,7 @@ strong, b, .rich-text-textarea strong, .rich-text-textarea b {
   
   .form-group {
     flex-direction: column !important;
-    align-items: flex-start !important;
+    align-items: stretch !important;
   }
   
   .form-label {
@@ -1076,25 +1076,6 @@ strong, b, .rich-text-textarea strong, .rich-text-textarea b {
  * Responsive Overrides for Sub-navigation
  * --------------------------------------------------------- */
 @media (max-width: 768px) {
-  .notes-layout-container {
-    flex-direction: column !important;
-    height: auto !important;
-    min-height: 500px;
-  }
-
-  .notes-sidebar {
-    width: 100% !important;
-    border-right: none !important;
-    border-bottom: 1px solid hsl(var(--border));
-    max-height: 250px;
-  }
-
-  .notes-editor-panel {
-    width: 100% !important;
-    flex: 1;
-    min-height: 350px;
-  }
-
   .asana-sub-tabs {
     width: 100%;
     justify-content: space-between;

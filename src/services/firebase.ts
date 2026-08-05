@@ -23,6 +23,7 @@ import {
   Timestamp
 } from 'firebase/firestore';
 import type { UserProfile, Project, Task, PreApprovedUser, Note } from '../../specs/001-project-task-calendar/contracts/firebase-service';
+import { mailService } from './mailService';
 
 import { getStorage } from 'firebase/storage';
 
@@ -266,6 +267,11 @@ export const firebaseService = {
       addedAt: Timestamp.now(),
       role
     });
+    
+    // Trigger welcome email safely in the background
+    mailService.sendWelcomeEmail(emailLower, role).catch((err) => {
+      console.error("Error sending welcome email in addPreApprovedUser:", err);
+    });
   },
 
   async removePreApprovedUser(email: string): Promise<void> {
@@ -280,9 +286,19 @@ export const firebaseService = {
     const users: PreApprovedUser[] = [];
     snap.forEach(doc => {
       const data = doc.data();
+      let addedAtDate = new Date();
+      if (data.addedAt) {
+        if (typeof data.addedAt.toDate === 'function') {
+          addedAtDate = data.addedAt.toDate();
+        } else if (data.addedAt instanceof Date) {
+          addedAtDate = data.addedAt;
+        } else if (typeof data.addedAt === 'string' || typeof data.addedAt === 'number') {
+          addedAtDate = new Date(data.addedAt);
+        }
+      }
       users.push({
         email: doc.id,
-        addedAt: (data.addedAt as Timestamp).toDate(),
+        addedAt: addedAtDate,
         role: data.role || 'user'
       });
     });
@@ -296,14 +312,22 @@ export const firebaseService = {
     const list: UserProfile[] = [];
     snap.forEach(doc => {
       const data = doc.data();
+      
+      const parseDate = (field: any) => {
+        if (!field) return new Date();
+        if (typeof field.toDate === 'function') return field.toDate();
+        if (field instanceof Date) return field;
+        return new Date(field);
+      };
+
       list.push({
         uid: doc.id,
         email: data.email,
         displayName: data.displayName,
         photoURL: data.photoURL || undefined,
         role: data.role,
-        createdAt: (data.createdAt as Timestamp).toDate(),
-        lastLogin: (data.lastLogin as Timestamp).toDate()
+        createdAt: parseDate(data.createdAt),
+        lastLogin: parseDate(data.lastLogin)
       });
     });
     return list;
@@ -324,6 +348,16 @@ export const firebaseService = {
       createdBy: currentUserProfile.uid,
       createdAt: now
     });
+
+    // Trigger project assignment emails safely in the background
+    if (assignedUsers && assignedUsers.length > 0) {
+      for (const email of assignedUsers) {
+        mailService.sendProjectAssignmentEmail(email, name).catch((err) => {
+          console.error(`Error sending project assignment email to ${email}:`, err);
+        });
+      }
+    }
+
     return docRef.id;
   },
 
@@ -380,6 +414,31 @@ export const firebaseService = {
     if (!currentUserProfile || (currentUserProfile.role !== 'admin' && currentUserProfile.role !== 'master_admin')) {
       throw new Error("Only admins can update project members");
     }
+
+    try {
+      // Find newly assigned users to send them email notifications
+      const existingProject = await firebaseService.getProject(projectId);
+      if (existingProject) {
+        const oldUsers = new Set(
+          (existingProject.assignedUsers || [])
+            .filter((e): e is string => typeof e === 'string')
+            .map(e => e.trim().toLowerCase())
+        );
+        const newUsers = (assignedUsers || [])
+          .filter((e): e is string => typeof e === 'string')
+          .filter(e => !oldUsers.has(e.trim().toLowerCase()));
+        
+        // Trigger emails safely in the background
+        for (const email of newUsers) {
+          mailService.sendProjectAssignmentEmail(email, existingProject.name).catch((err) => {
+            console.error(`Error sending project assignment email to ${email} in updateProjectMembers:`, err);
+          });
+        }
+      }
+    } catch (err) {
+      console.error("Error checking old members to send assignment emails:", err);
+    }
+
     const docRef = doc(db, 'projects', projectId);
     await updateDoc(docRef, { assignedUsers });
   },

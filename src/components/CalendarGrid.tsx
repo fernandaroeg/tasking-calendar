@@ -94,6 +94,15 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({ projectId, userRole, curren
   const [activeKebabTaskId, setActiveKebabTaskId] = useState<string | null>(null);
   const [activeKebabDate, setActiveKebabDate] = useState<Date | null>(null);
   const [kebabPosition, setKebabPosition] = useState<{ top: number; left: number } | null>(null);
+  const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
+
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth <= 768);
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   const handleDeleteTaskOption = async (task: Task, date: Date, option: 'single' | 'all' | 'forward') => {
     try {
@@ -311,7 +320,7 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({ projectId, userRole, curren
 
     return (
       <div className="calendar-container" style={{ height: '100%', display: 'flex', flexDirection: 'column', overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
-        <div style={{ minWidth: '950px', display: 'flex', flexDirection: 'column', flex: 1, height: '100%' }}>
+        <div style={{ minWidth: isMobile ? '350%' : '950px', display: 'flex', flexDirection: 'column', flex: 1, height: '100%' }}>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '1px', marginBottom: '1px', flexShrink: 0 }}>
             {dayNames.map(name => (
               <div key={name} className="calendar-day-header">{name}</div>
@@ -349,7 +358,7 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({ projectId, userRole, curren
 
     return (
       <div className="calendar-container" style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '1px', flex: 1, minHeight: '400px', minWidth: '950px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '1px', flex: 1, minHeight: '400px', minWidth: isMobile ? '233.33%' : '950px' }}>
           {weekDays.map((date, idx) => {
             const isToday = 
               today.getDate() === date.getDate() && 

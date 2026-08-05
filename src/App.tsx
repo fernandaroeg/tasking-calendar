@@ -16,10 +16,9 @@ function App() {
   const [authError, setAuthError] = useState<string | null>(null);
 
   // Navigation states
-  const [activeTab, setActiveTab] = useState<'calendar' | 'admin' | 'dashboard'>('calendar');
+  const [activeTab, setActiveTab] = useState<'calendar' | 'user_dashboard' | 'notes' | 'admin' | 'dashboard'>('user_dashboard');
   const [projects, setProjects] = useState<Project[]>([]);
   const [selectedProjectId, setSelectedProjectId] = useState<string>('all');
-  const [myCalendarSubTab, setMyCalendarSubTab] = useState<'calendar' | 'dashboard' | 'notes'>('calendar');
   const [projectsLoading, setProjectsLoading] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
@@ -168,12 +167,12 @@ function App() {
   }
 
   // Login view
-  if (!user) {
+  if (!user) { 
     return (
       <div className="auth-container">
-        <div className="glass-panel auth-card">
-          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '1.5rem' }}>
-            <img src={logoIbermex2025} alt="Ibermex Logo" style={{ height: '64px', objectFit: 'contain' }} />
+        <div className="glass-panel auth-card" style={{ margin: '0 1rem', boxSizing: 'border-box', width: 'calc(100% - 2rem)' }}>
+          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '1.5rem' }}> 
+            <img src={logoIbermex2025} alt="Ibermex Logo" style={{ height: '64px', objectFit: 'contain',  width: 'calc(100% -0.1rem)' }} /> 
           </div>
           <h1 style={{ fontFamily: 'var(--font-sans)', fontSize: '2.5rem', margin: '0 0 0.25rem', fontWeight: 800, color: 'var(--text-h)', letterSpacing: '-0.02em' }}>Task Calendar</h1>
           <p style={{ fontFamily: 'var(--font-serif)', fontStyle: 'italic', color: 'hsl(var(--primary))', fontSize: '1.1rem', margin: '0 0 1.25rem', fontWeight: 600 }}>
@@ -253,6 +252,21 @@ function App() {
         {/* Navigation Tabs */}
         <nav style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem', marginBottom: '2rem', width: '100%' }}>
           <button
+            className={`project-item ${activeTab === 'user_dashboard' ? 'active' : ''}`}
+            onClick={() => {
+              setActiveTab('user_dashboard');
+              setSelectedProjectId('');
+            }}
+            style={{ justifyContent: sidebarCollapsed ? 'center' : 'flex-start', padding: sidebarCollapsed ? '0.6rem' : '0.75rem 1rem' }}
+            title={sidebarCollapsed ? "Panel de Usuario" : undefined}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+              <LayoutDashboard size={18} style={{ flexShrink: 0 }} />
+              {!sidebarCollapsed && <span>Panel de Usuario</span>}
+            </div>
+          </button>
+
+          <button
             className={`project-item ${activeTab === 'calendar' && selectedProjectId === 'all' ? 'active' : ''}`}
             onClick={() => {
               setSelectedProjectId('all');
@@ -264,6 +278,21 @@ function App() {
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
               <CalendarIcon size={18} style={{ flexShrink: 0 }} />
               {!sidebarCollapsed && <span>Mi Calendario</span>}
+            </div>
+          </button>
+
+          <button
+            className={`project-item ${activeTab === 'notes' ? 'active' : ''}`}
+            onClick={() => {
+              setActiveTab('notes');
+              setSelectedProjectId('');
+            }}
+            style={{ justifyContent: sidebarCollapsed ? 'center' : 'flex-start', padding: sidebarCollapsed ? '0.6rem' : '0.75rem 1rem' }}
+            title={sidebarCollapsed ? "Notas" : undefined}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+              <FileText size={18} style={{ flexShrink: 0 }} />
+              {!sidebarCollapsed && <span>Notas</span>}
             </div>
           </button>
 
@@ -395,54 +424,25 @@ function App() {
           </span>
         </div>
 
-        {activeTab === 'calendar' ? (
+        {activeTab === 'user_dashboard' ? (
+          <div style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
+            <div style={{ marginBottom: '1.5rem' }}>
+              <h1 style={{ margin: '0 0 0.25rem', fontSize: '2rem', fontWeight: 800 }}>Panel de Usuario</h1>
+              <p style={{ color: 'var(--muted-foreground)', fontSize: '0.9rem' }}>Resumen de mis tareas y rendimiento</p>
+            </div>
+            <div style={{ flex: 1, overflowY: 'auto', padding: '2px' }}>
+              <UserDashboard currentUserProfile={user} projects={projects} />
+            </div>
+          </div>
+        ) : activeTab === 'calendar' ? (
           selectedProjectId === 'all' ? (
             <div style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
-              <div style={{ marginBottom: '1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1rem' }}>
-                <div>
-                  <h1 style={{ margin: '0 0 0.25rem', fontSize: '2rem', fontWeight: 800 }}>Mi Calendario</h1>
-                  <p style={{ color: 'var(--muted-foreground)', fontSize: '0.9rem' }}>Todas mis tareas asignadas en mis proyectos</p>
-                </div>
-
-                {/* Sub-tabs horizontal bar */}
-                <div className="asana-sub-tabs" style={{ display: 'flex', gap: '0.5rem', alignSelf: 'flex-end' }}>
-                  <button
-                    onClick={() => setMyCalendarSubTab('calendar')}
-                    className={`asana-sub-tab-btn ${myCalendarSubTab === 'calendar' ? 'active' : ''}`}
-                  >
-                    <CalendarIcon size={16} />
-                    Calendario
-                  </button>
-                  <button
-                    onClick={() => setMyCalendarSubTab('dashboard')}
-                    className={`asana-sub-tab-btn ${myCalendarSubTab === 'dashboard' ? 'active' : ''}`}
-                  >
-                    <LayoutDashboard size={16} />
-                    Panel de Usuario
-                  </button>
-                  <button
-                    onClick={() => setMyCalendarSubTab('notes')}
-                    className={`asana-sub-tab-btn ${myCalendarSubTab === 'notes' ? 'active' : ''}`}
-                  >
-                    <FileText size={16} />
-                    Notas
-                  </button>
-                </div>
+              <div style={{ marginBottom: '1.5rem' }}>
+                <h1 style={{ margin: '0 0 0.25rem', fontSize: '2rem', fontWeight: 800 }}>Mi Calendario</h1>
+                <p style={{ color: 'var(--muted-foreground)', fontSize: '0.9rem' }}>Todas mis tareas asignadas en mis proyectos</p>
               </div>
-
-              {/* Conditionally render content */}
               <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-                {myCalendarSubTab === 'calendar' ? (
-                  <CalendarGrid projectId="all" userRole={user.role} currentUserProfile={user} projects={projects} />
-                ) : myCalendarSubTab === 'dashboard' ? (
-                  <div style={{ flex: 1, overflowY: 'auto', padding: '2px' }}>
-                    <UserDashboard currentUserProfile={user} projects={projects} />
-                  </div>
-                ) : (
-                  <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-                    <UserNotes currentUserProfile={user} />
-                  </div>
-                )}
+                <CalendarGrid projectId="all" userRole={user.role} currentUserProfile={user} projects={projects} />
               </div>
             </div>
           ) : activeProject ? (
@@ -470,14 +470,21 @@ function App() {
               )}
             </div>
           )
+        ) : activeTab === 'notes' ? (
+          <div style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
+            <div style={{ marginBottom: '1.5rem' }}>
+              <h1 style={{ margin: '0 0 0.25rem', fontSize: '2rem', fontWeight: 800 }}>Notas</h1>
+              <p style={{ color: 'var(--muted-foreground)', fontSize: '0.9rem' }}>Mis notas personales y apuntes</p>
+            </div>
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+              <UserNotes currentUserProfile={user} />
+            </div>
+          </div>
         ) : activeTab === 'admin' ? (
           (user.role === 'admin' || user.role === 'master_admin') && (
             <div style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
               <div style={{ marginBottom: '1.5rem' }}>
                 <h1 style={{ margin: '0 0 0.25rem', fontSize: '2rem', fontWeight: 800 }}>Administración</h1>
-                {/*<p style={{ color: 'var(--muted-foreground)', fontSize: '0.9rem' }}>
-                  Gestiona la lista de correos aprobados y la asignación de usuarios a proyectos.
-                </p> */}
               </div>
               <div style={{ flex: 1, overflowY: 'auto' }}>
                 <AdminDashboard

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { PenTool, Plus, Search, Trash2, Save, FileText, Check } from 'lucide-react';
+import { PenTool, Plus, Search, Trash2, Save, FileText, Check, ArrowLeft } from 'lucide-react';
 import { firebaseService } from '../services/firebase';
 import type { Note, UserProfile } from '../../specs/001-project-task-calendar/contracts/firebase-service';
 import RichTextEditor from './RichTextEditor';
@@ -30,6 +30,22 @@ const UserNotes: React.FC<UserNotesProps> = ({ currentUserProfile }) => {
   const [editorTitle, setEditorTitle] = useState('');
   const [editorContent, setEditorContent] = useState('');
   const [saving, setSaving] = useState(false);
+
+  // Responsive state
+  const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth <= 768);
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  // Delete confirmation state
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  useEffect(() => {
+    setConfirmDelete(false);
+  }, [selectedNoteId]);
 
   // 1. Subscribe to user notes from Firestore
   useEffect(() => {
@@ -94,13 +110,24 @@ const UserNotes: React.FC<UserNotesProps> = ({ currentUserProfile }) => {
   // 6. Delete note
   const handleDeleteNote = async () => {
     if (!selectedNoteId) return;
-    if (window.confirm("¿Estás seguro de que deseas eliminar esta nota?")) {
-      try {
-        await firebaseService.deleteUserNote(selectedNoteId);
-        setSelectedNoteId(null);
-      } catch (err) {
-        console.error("Error deleting note:", err);
-      }
+    
+    if (!confirmDelete) {
+      setConfirmDelete(true);
+      // Revert confirmation state after 4 seconds if not clicked again
+      setTimeout(() => {
+        setConfirmDelete(false);
+      }, 4000);
+      return;
+    }
+
+    try {
+      await firebaseService.deleteUserNote(selectedNoteId);
+      setSelectedNoteId(null);
+      setConfirmDelete(false);
+    } catch (err: any) {
+      console.error("Error deleting note:", err);
+      alert("Error al eliminar la nota: " + (err.message || err));
+      setConfirmDelete(false);
     }
   };
 
@@ -117,9 +144,18 @@ const UserNotes: React.FC<UserNotesProps> = ({ currentUserProfile }) => {
   }
 
   return (
-    <div className="glass-panel notes-layout-container" style={{ display: 'flex', height: '600px', overflow: 'hidden', padding: 0 }}>
+    <div className="glass-panel notes-layout-container" style={{ display: 'flex', height: isMobile ? 'calc(100vh - 180px)' : '600px', overflow: 'hidden', padding: 0 }}>
       {/* Sidebar Panel: Notes List (30% width) */}
-      <div className="notes-sidebar" style={{ width: '30%', borderRight: '1px solid hsl(var(--border))', display: 'flex', flexDirection: 'column', height: '100%' }}>
+      <div
+        className="notes-sidebar"
+        style={{
+          width: isMobile ? '100%' : '30%',
+          borderRight: isMobile ? 'none' : '1px solid hsl(var(--border))',
+          display: isMobile && selectedNoteId !== null ? 'none' : 'flex',
+          flexDirection: 'column',
+          height: '100%'
+        }}
+      >
         <div style={{ padding: '1rem', borderBottom: '1px solid hsl(var(--border))', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
           <button
             type="button"
@@ -193,45 +229,106 @@ const UserNotes: React.FC<UserNotesProps> = ({ currentUserProfile }) => {
       </div>
 
       {/* Editor Panel (70% width) */}
-      <div className="notes-editor-panel" style={{ width: '70%', display: 'flex', flexDirection: 'column', height: '100%', background: 'hsl(var(--card))' }}>
+      <div
+        className="notes-editor-panel"
+        style={{
+          width: isMobile ? '100%' : '70%',
+          display: isMobile && selectedNoteId === null ? 'none' : 'flex',
+          flexDirection: 'column',
+          height: '100%',
+          background: 'hsl(var(--card))'
+        }}
+      >
         {selectedNote ? (
           <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
             {/* Top Toolbar */}
             <div style={{ padding: '0.75rem 1.5rem', borderBottom: '1px solid hsl(var(--border))', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              {/* Saving status indicator */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.8rem' }}>
-                {saving ? (
-                  <span style={{ color: 'hsl(var(--muted-foreground))', fontWeight: 500 }}>Guardando...</span>
-                ) : isDirty ? (
-                  <span style={{ color: 'hsl(var(--primary))', fontWeight: 600 }}>Cambios sin guardar</span>
-                ) : (
-                  <span style={{ color: '#0d9668', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                    <Check size={14} />
-                    Guardado
-                  </span>
+              {/* Left Side: Back Arrow and Saving status indicator */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                {isMobile && (
+                  <button
+                    type="button"
+                    onClick={() => setSelectedNoteId(null)}
+                    style={{
+                      background: 'transparent',
+                      border: 'none',
+                      color: 'var(--text)',
+                      cursor: 'pointer',
+                      padding: '0.25rem',
+                      marginRight: '0.5rem',
+                      display: 'flex',
+                      alignItems: 'center'
+                    }}
+                    title="Volver"
+                  >
+                    <ArrowLeft size={20} />
+                  </button>
                 )}
+                
+                {/* Saving status indicator */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.8rem' }}>
+                  {saving ? (
+                    <span style={{ color: 'hsl(var(--muted-foreground))', fontWeight: 500 }}>Guardando...</span>
+                  ) : isDirty ? (
+                    <span style={{ color: 'hsl(var(--primary))', fontWeight: 600 }}>Cambios sin guardar</span>
+                  ) : (
+                    <span style={{ color: '#0d9668', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                      <Check size={14} />
+                      Guardado
+                    </span>
+                  )}
+                </div>
               </div>
 
               {/* Action Buttons */}
               <div style={{ display: 'flex', gap: '0.75rem' }}>
                 <button
                   type="button"
-                  className="btn-secondary"
+                  className={confirmDelete ? "btn-primary" : "btn-secondary"}
                   onClick={handleDeleteNote}
-                  style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', padding: '0.4rem 0.8rem', color: '#ef4444', borderColor: 'rgba(239, 68, 68, 0.2)' }}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: (isMobile && !confirmDelete) ? '0' : '0.35rem',
+                    padding: (isMobile && !confirmDelete) ? '0.45rem' : '0.4rem 0.8rem',
+                    color: confirmDelete ? '#ffffff' : '#ef4444',
+                    borderColor: confirmDelete ? '#ef4444' : 'rgba(239, 68, 68, 0.2)',
+                    borderRadius: '6px',
+                    background: confirmDelete ? '#ef4444' : ((isMobile && !confirmDelete) ? 'rgba(239, 68, 68, 0.05)' : 'transparent'),
+                    transition: 'all 0.25s ease'
+                  }}
+                  title={confirmDelete ? "Haz clic de nuevo para confirmar" : "Eliminar nota"}
                 >
-                  <Trash2 size={16} />
-                  Eliminar
+                  {confirmDelete ? (
+                    <>
+                      <Check size={16} />
+                      <span style={{ fontSize: '0.85rem', fontWeight: 600 }}>Confirmar</span>
+                    </>
+                  ) : (
+                    <>
+                      <Trash2 size={16} />
+                      {!isMobile && 'Eliminar'}
+                    </>
+                  )}
                 </button>
                 <button
                   type="button"
                   className="btn-primary"
                   onClick={handleSaveNote}
                   disabled={saving || !isDirty}
-                  style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', padding: '0.4rem 1rem' }}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: isMobile ? '0' : '0.35rem',
+                    padding: isMobile ? '0.45rem' : '0.4rem 1rem',
+                    borderRadius: '6px'
+                  }}
+                  title="Guardar nota"
                 >
                   <Save size={16} />
-                  {saving ? 'Guardando...' : 'Guardar'}
+                  {!isMobile && (saving ? 'Guardando...' : 'Guardar')}
                 </button>
               </div>
             </div>
