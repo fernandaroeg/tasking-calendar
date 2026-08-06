@@ -1,0 +1,9 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">calendario-ibermex</string>
+    <string name="title_activity_main">calendario-ibermex</string>
+    <string name="package_name">mx.grupoibermex.calendario</string>
+    <string name="custom_url_scheme">mx.grupoibermex.calendario</string>
+    <string name="server_client_id">17140881160-5utgop9tggicj93lbnsf461eh0b0eqiv.apps.googleusercontent.com</string>
+    <string name="google_server_client_id">17140881160-5utgop9tggicj93lbnsf461eh0b0eqiv.apps.googleusercontent.com</string>
+</resources>

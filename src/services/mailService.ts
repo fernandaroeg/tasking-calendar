@@ -3,6 +3,8 @@
  * Follows the corporate style guide of Ibermex.
  */
 
+import { platformService } from './platform';
+
 /**
  * Returns the correct endpoint URL based on whether we are in Development (using Vite proxy)
  * and whether a Sandbox ID is provided.
@@ -11,6 +13,10 @@ const getSendUrl = (): string => {
   const isDev = import.meta.env.DEV;
   const isTest = import.meta.env.MODE === "test";
   const sandboxId = import.meta.env.VITE_MAILTRAP_SANDBOX_ID;
+
+  if (platformService.isNative()) {
+    return platformService.getApiUrl('/api/send');
+  }
 
   if (sandboxId && sandboxId !== "your_sandbox_id") {
     // Sandbox API URL

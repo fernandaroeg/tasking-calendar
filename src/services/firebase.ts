@@ -2,11 +2,14 @@ import { initializeApp } from 'firebase/app';
 import {
   getAuth,
   signInWithPopup,
+  signInWithCredential,
   GoogleAuthProvider,
   signOut,
   onAuthStateChanged as fbOnAuthStateChanged
 } from 'firebase/auth';
 import type { User as FirebaseUser } from 'firebase/auth';
+import { GoogleAuth } from '@codetrix-studio/capacitor-google-auth';
+import { platformService } from './platform';
 import {
   getFirestore,
   doc,
@@ -42,6 +45,16 @@ const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
 export const db = getFirestore(app);
 export const storage = getStorage(app);
+
+// Inicializar Google Auth para plataformas nativas
+if (platformService.isNative()) {
+  GoogleAuth.initialize({
+    clientId: '17140881160-5utgop9tggicj93lbnsf461eh0b0eqiv.apps.googleusercontent.com',
+    scopes: ['profile', 'email'],
+    grantOfflineAccess: true,
+  });
+}
+
 const googleProvider = new GoogleAuthProvider();
 
 // Current cached user profile to avoid repeated Firestore lookups
@@ -68,7 +81,14 @@ export const firebaseService = {
   // Authentication
   async loginWithGoogle(): Promise<UserProfile> {
     try {
-      const result = await signInWithPopup(auth, googleProvider);
+      let result;
+      if (platformService.isNative()) {
+        const googleUser = await GoogleAuth.signIn();
+        const credential = GoogleAuthProvider.credential(googleUser.authentication.idToken);
+        result = await signInWithCredential(auth, credential);
+      } else {
+        result = await signInWithPopup(auth, googleProvider);
+      }
       const user = result.user;
 
       if (!user.email) {

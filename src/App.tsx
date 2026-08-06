@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { LogIn, LogOut, Calendar as CalendarIcon, ShieldAlert, Folder, Plus, Users, Loader2, X, Check, ChevronLeft, ChevronRight, LayoutDashboard, Menu, FileText } from 'lucide-react';
 import { firebaseService } from './services/firebase';
+import { platformService } from './services/platform';
 import type { UserProfile, Project, PreApprovedUser } from '../specs/001-project-task-calendar/contracts/firebase-service';
 import CalendarGrid from './components/CalendarGrid';
 import UserDashboard from './components/UserDashboard';
@@ -30,6 +31,30 @@ function App() {
   const [whitelist, setWhitelist] = useState<PreApprovedUser[]>([]);
   const [selectedUserUids, setSelectedUserUids] = useState<string[]>([]);
   const [submittingProject, setSubmittingProject] = useState(false);
+
+  // Android back-button intercept
+  useEffect(() => {
+    if (platformService.isNative()) {
+      const initBackButton = async () => {
+        const { App: CapApp } = await import('@capacitor/app');
+        return CapApp.addListener('backButton', () => {
+          // Check if any modal is open in the DOM
+          const closeBtn = document.querySelector('.modal-close-btn') as HTMLElement || 
+                           document.querySelector('.modal-overlay button') as HTMLElement ||
+                           document.querySelector('button[title="Volver"]') as HTMLElement;
+          if (closeBtn) {
+            closeBtn.click();
+          } else {
+            CapApp.exitApp();
+          }
+        });
+      };
+      const backButtonSub = initBackButton();
+      return () => {
+        backButtonSub.then(sub => sub.remove());
+      };
+    }
+  }, []);
 
   // 1. Subscribe to Auth state changes
   useEffect(() => {
@@ -172,9 +197,9 @@ function App() {
       <div className="auth-container">
         <div className="glass-panel auth-card" style={{ margin: '0 1rem', boxSizing: 'border-box', width: 'calc(100% - 2rem)' }}>
           <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '1.5rem' }}> 
-            <img src={logoIbermex2025} alt="Ibermex Logo" style={{ height: '64px', objectFit: 'contain',  width: 'calc(100% -0.1rem)' }} /> 
+            <img src={logoIbermex2025} alt="Ibermex Logo" style={{ height: '64px', objectFit: 'contain', maxWidth: '98%' }} /> 
           </div>
-          <h1 style={{ fontFamily: 'var(--font-sans)', fontSize: '2.5rem', margin: '0 0 0.25rem', fontWeight: 800, color: 'var(--text-h)', letterSpacing: '-0.02em' }}>Task Calendar</h1>
+          <h1 style={{ fontFamily: 'var(--font-sans)', fontSize: '2.2rem', margin: '0 0 0.25rem', fontWeight: 800, color: 'var(--text-h)', letterSpacing: '-0.02em' }}>Task Calendar</h1>
           <p style={{ fontFamily: 'var(--font-serif)', fontStyle: 'italic', color: 'hsl(var(--primary))', fontSize: '1.1rem', margin: '0 0 1.25rem', fontWeight: 600 }}>
             "Construyendo el Futuro con los Mejores Cimientos"
           </p>
@@ -256,6 +281,7 @@ function App() {
             onClick={() => {
               setActiveTab('user_dashboard');
               setSelectedProjectId('');
+              if (window.innerWidth <= 768) setSidebarCollapsed(true);
             }}
             style={{ justifyContent: sidebarCollapsed ? 'center' : 'flex-start', padding: sidebarCollapsed ? '0.6rem' : '0.75rem 1rem' }}
             title={sidebarCollapsed ? "Panel de Usuario" : undefined}
@@ -271,6 +297,7 @@ function App() {
             onClick={() => {
               setSelectedProjectId('all');
               setActiveTab('calendar');
+              if (window.innerWidth <= 768) setSidebarCollapsed(true);
             }}
             style={{ justifyContent: sidebarCollapsed ? 'center' : 'flex-start', padding: sidebarCollapsed ? '0.6rem' : '0.75rem 1rem' }}
             title={sidebarCollapsed ? "Mi Calendario" : undefined}
@@ -286,6 +313,7 @@ function App() {
             onClick={() => {
               setActiveTab('notes');
               setSelectedProjectId('');
+              if (window.innerWidth <= 768) setSidebarCollapsed(true);
             }}
             style={{ justifyContent: sidebarCollapsed ? 'center' : 'flex-start', padding: sidebarCollapsed ? '0.6rem' : '0.75rem 1rem' }}
             title={sidebarCollapsed ? "Notas" : undefined}
@@ -300,7 +328,10 @@ function App() {
             <>
               <button
                 className={`project-item ${activeTab === 'admin' ? 'active' : ''}`}
-                onClick={() => setActiveTab('admin')}
+                onClick={() => {
+                  setActiveTab('admin');
+                  if (window.innerWidth <= 768) setSidebarCollapsed(true);
+                }}
                 style={{ justifyContent: sidebarCollapsed ? 'center' : 'flex-start', padding: sidebarCollapsed ? '0.6rem' : '0.75rem 1rem' }}
                 title={sidebarCollapsed ? "Administración" : undefined}
               >
@@ -312,7 +343,10 @@ function App() {
 
               <button
                 className={`project-item ${activeTab === 'dashboard' ? 'active' : ''}`}
-                onClick={() => setActiveTab('dashboard')}
+                onClick={() => {
+                  setActiveTab('dashboard');
+                  if (window.innerWidth <= 768) setSidebarCollapsed(true);
+                }}
                 style={{ justifyContent: sidebarCollapsed ? 'center' : 'flex-start', padding: sidebarCollapsed ? '0.6rem' : '0.75rem 1rem' }}
                 title={sidebarCollapsed ? "Dashboard" : undefined}
               >
@@ -373,6 +407,7 @@ function App() {
                   onClick={() => {
                     setSelectedProjectId(p.id);
                     setActiveTab('calendar');
+                    if (window.innerWidth <= 768) setSidebarCollapsed(true);
                   }}
                   style={{ padding: sidebarCollapsed ? '0.6rem' : '0.6rem 0.75rem', fontSize: '0.85rem', justifyContent: sidebarCollapsed ? 'center' : 'flex-start' }}
                   title={sidebarCollapsed ? p.name : undefined}
